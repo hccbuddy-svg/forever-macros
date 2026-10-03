@@ -1,0 +1,202 @@
+[
+  [
+    "first login creates only applicable learned macros",
+    "TEST.learn(75, \"Auto Shot\"); TEST.learn(1130, \"Hunter's Mark\"); TEST.login()\nassert(TEST.named(\"FM AutoShot\") and TEST.named(\"FM MarkPet\"))\nassert(not TEST.named(\"FM MendPet\") and not TEST.named(\"FM Heal\"))\nassert(TEST.writes == 8)"
+  ],
+  [
+    "repeated login and macro events are idempotent",
+    "TEST.learnAll(\"HUNTER\"); TEST.login(); local count = TEST.writes\nTEST.fire(\"PLAYER_ENTERING_WORLD\"); TEST.fire(\"UPDATE_MACROS\"); TEST.flush()\nTEST.login(); assert(TEST.writes == count)"
+  ],
+  [
+    "training adds newly learned abilities",
+    "TEST.login(); assert(not TEST.named(\"FM MendPet\"))\nTEST.learn(136, \"Mend Pet\"); TEST.fire(\"SPELLS_CHANGED\"); TEST.flush()\nassert(TEST.named(\"FM MendPet\"))"
+  ],
+  [
+    "localized spell names come from learned spellbook",
+    "TEST.locale = \"deDE\"; TEST.learn(136, \"Tier heilen\"); TEST.login()\nassert(TEST.named(\"FM MendPet\").body:find(\"Tier heilen\", 1, true))"
+  ],
+  [
+    "higher rank is resolved by localized name",
+    "TEST.names[136] = \"Mend Pet\"; TEST.learn(999001, \"Mend Pet\"); TEST.login()\nassert(TEST.named(\"FM MendPet\"))"
+  ],
+  [
+    "unknown spells are excluded",
+    "TEST.names[136] = \"Mend Pet\"; TEST.login(); assert(not TEST.named(\"FM MendPet\"))"
+  ],
+  [
+    "future spellbook entries are not considered learned",
+    "TEST.learn(136, \"Mend Pet\"); TEST.known[136] = false\nTEST.login(); assert(not TEST.named(\"FM MendPet\"))"
+  ],
+  [
+    "passive and off-spec entries are excluded",
+    "TEST.learn(136, \"Mend Pet\", {isPassive = true})\nTEST.learn(1130, \"Hunter's Mark\", {isOffSpec = true}); TEST.login()\nassert(not TEST.named(\"FM MendPet\") and not TEST.named(\"FM MarkPet\"))"
+  ],
+  [
+    "pet spell bank does not qualify as a player spell",
+    "TEST.learn(136, \"Mend Pet\", {bank = 1})\nTEST.login(); assert(not TEST.named(\"FM MendPet\"))"
+  ],
+  [
+    "existing same-name macro is preserved",
+    "TEST.seed(\"FM MarkPet\", \"/say personal\", true)\nTEST.learnAll(\"HUNTER\"); TEST.login(); assert(TEST.named(\"FM MarkPet\").body == \"/say personal\")\nassert(ForeverMacrosDB.managed.hunter_mark == nil)"
+  ],
+  [
+    "account name collision is preserved",
+    "TEST.seed(\"FM Stop\", \"/say mine\", false); TEST.login()\nassert(TEST.named(\"FM Stop\").character == false and TEST.named(\"FM Stop\").body == \"/say mine\")"
+  ],
+  [
+    "identical account macro body is not duplicated",
+    "TEST.seed(\"MyStop\", \"/stopcasting\\r\\n/stopattack\\n\", false); TEST.login()\nassert(not TEST.named(\"FM Stop\"))"
+  ],
+  [
+    "player edits survive reconciliation",
+    "TEST.learnAll(\"HUNTER\"); TEST.login()\nTEST.named(\"FM MarkPet\").body = \"/say edited\"\nTEST.fire(\"UPDATE_MACROS\"); TEST.flush(); TEST.login()\nassert(TEST.named(\"FM MarkPet\").body == \"/say edited\")"
+  ],
+  [
+    "deleted managed macros stay deleted",
+    "TEST.login(); local count = TEST.writes\nfor i, macro in ipairs(TEST.macros) do if macro.name == \"FM Stop\" then table.remove(TEST.macros, i); break end end\nTEST.fire(\"UPDATE_MACROS\"); TEST.flush(); TEST.login()\nassert(not TEST.named(\"FM Stop\") and TEST.writes == count)"
+  ],
+  [
+    "renamed managed macros stay renamed",
+    "TEST.login(); TEST.named(\"FM Stop\").name = \"My Stop\"\nTEST.login(); assert(not TEST.named(\"FM Stop\") and TEST.named(\"My Stop\"))"
+  ],
+  [
+    "explicit restore can recreate a deleted managed macro",
+    "TEST.login()\nfor i, macro in ipairs(TEST.macros) do if macro.name == \"FM Stop\" then table.remove(TEST.macros, i); break end end\nTEST.command(\"restore stop\"); assert(TEST.named(\"FM Stop\"))"
+  ],
+  [
+    "restore never overwrites an existing edit",
+    "TEST.login(); TEST.named(\"FM Stop\").body = \"/say edit\"\nTEST.command(\"restore stop\"); assert(TEST.named(\"FM Stop\").body == \"/say edit\")"
+  ],
+  [
+    "default reserve leaves two slots free",
+    "Constants.MacroConsts.MAX_CHARACTER_MACROS = 8\nTEST.learnAll(\"HUNTER\"); TEST.login(); local _, count = GetNumMacros(); assert(count == 6)"
+  ],
+  [
+    "full slots never alter existing macros",
+    "Constants.MacroConsts.MAX_CHARACTER_MACROS = 4\nfor i = 1, 4 do TEST.seed(\"Mine\" .. i, \"/say \" .. i, true) end\nTEST.login(); assert(TEST.writes == 0); assert(TEST.named(\"Mine1\").body == \"/say 1\")"
+  ],
+  [
+    "reserve can be adjusted explicitly",
+    "Constants.MacroConsts.MAX_CHARACTER_MACROS = 8\nTEST.login(); TEST.command(\"reserve 0\"); TEST.learn(136, \"Mend Pet\"); TEST.fire(\"SPELLS_CHANGED\"); TEST.flush()\nassert(TEST.named(\"FM MendPet\")); TEST.command(\"reserve -1\"); assert(ForeverMacrosDB.reserve == 0)"
+  ],
+  [
+    "combat defers first-login creation",
+    "TEST.combat = true; TEST.learnAll(\"HUNTER\"); TEST.login(); assert(TEST.writes == 0)\nTEST.combat = false; TEST.fire(\"PLAYER_REGEN_ENABLED\"); TEST.flush(); assert(TEST.writes > 0)"
+  ],
+  [
+    "combat begins between creations",
+    "local original = CreateMacro\nCreateMacro = function(...) local index = original(...); TEST.combat = true; return index end\nTEST.login(); assert(TEST.writes == 1)\nCreateMacro = original; TEST.combat = false; TEST.fire(\"PLAYER_REGEN_ENABLED\"); TEST.flush()\nassert(TEST.writes == 6)"
+  ],
+  [
+    "disabled automatic additions remain disabled",
+    "ForeverMacrosDB = {schema = 1, enabled = false}; TEST.login()\nassert(TEST.writes == 0); TEST.command(\"on\"); assert(TEST.writes == 6)\nTEST.command(\"off\"); TEST.learn(136, \"Mend Pet\"); TEST.fire(\"SPELLS_CHANGED\"); TEST.flush()\nassert(not TEST.named(\"FM MendPet\"))"
+  ],
+  [
+    "skip retains an existing macro",
+    "TEST.login(); TEST.command(\"skip stop\")\nassert(ForeverMacrosDB.skipped.stop and TEST.named(\"FM Stop\"))"
+  ],
+  [
+    "skip prevents a future template",
+    "TEST.login(); TEST.command(\"skip hunter_mend\")\nTEST.learn(136, \"Mend Pet\"); TEST.fire(\"SPELLS_CHANGED\"); TEST.flush()\nassert(not TEST.named(\"FM MendPet\"))"
+  ],
+  [
+    "unsupported clients perform no writes",
+    "TEST.version = \"1.15.9\"; TEST.login(); TEST.command(\"install\")\nassert(TEST.writes == 0)"
+  ],
+  [
+    "macro API failure halts further writes until retry",
+    "TEST.failCreate = true; TEST.login()\nassert(TEST.writes == 0); TEST.failCreate = false; TEST.fire(\"UPDATE_MACROS\"); TEST.flush()\nassert(TEST.writes == 0); TEST.command(\"retry\"); assert(TEST.writes == 6)"
+  ],
+  [
+    "unconfirmed create halts and retry avoids duplicate",
+    "TEST.noReturn = true; TEST.login(); assert(TEST.writes == 1)\nTEST.noReturn = false; TEST.command(\"retry\"); assert(TEST.writes == 6)"
+  ],
+  [
+    "returned index must be a character slot",
+    "TEST.corruptReturn = true; TEST.login(); assert(TEST.writes == 1)\nTEST.fire(\"SPELLS_CHANGED\"); TEST.flush(); assert(TEST.writes == 1)"
+  ],
+  [
+    "readiness mismatch prevents changes",
+    "TEST.badCounts = true; TEST.login(); assert(TEST.writes == 0)\nTEST.badCounts = false; TEST.command(\"retry\"); assert(TEST.writes == 6)"
+  ],
+  [
+    "missing macro constants fail clearly",
+    "Constants.MacroConsts = nil; TEST.login(); assert(TEST.writes == 0)"
+  ],
+  [
+    "missing spell APIs only allow utility macros",
+    "C_SpellBook = nil; TEST.learnAll(\"HUNTER\"); TEST.login()\nassert(TEST.writes == 6 and not TEST.named(\"FM MendPet\"))"
+  ],
+  [
+    "first snapshot preserves original macro bodies",
+    "TEST.seed(\"Original\", \"/say kept\", true); TEST.login()\nassert(#ForeverMacrosDB.backup.macros == 1)\nassert(ForeverMacrosDB.backup.macros[1].body == \"/say kept\")\nTEST.login(); assert(#ForeverMacrosDB.backup.macros == 1)"
+  ],
+  [
+    "preview does not mutate macro or management state",
+    "TEST.login(); local count = TEST.writes\nTEST.command(\"list\"); TEST.command(\"show hunter_mend\"); TEST.command(\"show stop\")\nassert(TEST.writes == count)"
+  ],
+  [
+    "unknown command and foreign-class IDs do not mutate macros",
+    "TEST.login(); local count = TEST.writes\nTEST.command(\"restore mage_blink\"); TEST.command(\"skip nonexistent\"); TEST.command(\"help\")\nassert(TEST.writes == count and not ForeverMacrosDB.skipped.nonexistent)"
+  ],
+  [
+    "unsupported saved-data schema is retained",
+    "ForeverMacrosDB = {schema = 99, marker = \"keep\"}; TEST.login()\nassert(TEST.writes == 0 and ForeverMacrosDB.schema == 99 and ForeverMacrosDB.marker == \"keep\")"
+  ],
+  [
+    "each Classic class has a bounded valid unique collection",
+    "for _, class in ipairs({\"HUNTER\",\"WARRIOR\",\"ROGUE\",\"MAGE\",\"PRIEST\",\"DRUID\",\"PALADIN\",\"SHAMAN\",\"WARLOCK\"}) do\nlocal names, ids, count, starterCount = {}, {}, 0, 0\nfor _, definition in ipairs(FM.Catalog) do\n if definition.class == \"ALL\" or definition.class == class then\n  assert(not names[definition.name] and not ids[definition.id])\n  names[definition.name] = true; ids[definition.id] = true; count = count + 1; if not definition.optional then starterCount = starterCount + 1 end\n  local body = assert(FM.Core.Render(definition, function(req) return req.english end))\n  assert(#body <= 255 and #definition.name <= 16)\n  assert(not body:find(\"/run\", 1, true) and not body:find(\"/script\", 1, true))\n end\nend\nassert(count >= 8 and starterCount >= 8 and starterCount <= 28)\nend"
+  ],
+  [
+    "oversized localized names do not create truncated macros",
+    "TEST.learn(136, string.rep(\"x\", 240)); TEST.login()\nassert(not TEST.named(\"FM MendPet\"))"
+  ],
+  [
+    "character settings have no account-global identity key",
+    "TEST.login()\nassert(ForeverMacrosDB.managed.stop and ForeverMacrosDB.name == nil and ForeverMacrosDB.realm == nil)\nlocal fresh = FM.Core.NewState(nil); assert(next(fresh.managed) == nil and fresh.enabled == true)"
+  ],
+  [
+    "same-body collision arriving after plan is respected",
+    "TEST.login(); TEST.learn(136, \"Mend Pet\")\nlocal snapshot = {macros = {}, characterCount = 0, accountLimit = 120, limit = 30}\nlocal db = FM.Core.NewState(nil)\nlocal plan = FM.Core.Plan(db, \"HUNTER\", snapshot, function(req) if req.id == 136 then return \"Mend Pet\" end end)\nlocal writes = 0\nFM.Core.Apply(db, plan, {\ninCombat = function() return false end, build = \"1.60.1\", timestamp = function() return 1 end,\nsnapshot = function() return {macros = {{name = \"New personal\", body = \"/stopcasting\\n/stopattack\", character = true}}, characterCount = 1, accountLimit = 120, limit = 30} end,\ncreate = function(name) assert(name ~= \"FM Stop\"); writes = writes + 1; error(\"stop test\") end,\ngetInfo = GetMacroInfo,\n})\nassert(writes == 1)\n"
+  ],
+  [
+    "missing combat API fails without an uncaught error",
+    "InCombatLockdown = nil; TEST.login(); assert(TEST.writes == 0)"
+  ],
+  [
+    "data readiness can recover on a later macro event",
+    "TEST.badCounts = true; TEST.login(); assert(TEST.writes == 0)\nTEST.badCounts = false; TEST.fire(\"UPDATE_MACROS\"); TEST.flush(); assert(TEST.writes == 6)"
+  ],
+  [
+    "all classes install only their own eligible spell templates",
+    "for _, class in ipairs({\"HUNTER\",\"WARRIOR\",\"ROGUE\",\"MAGE\",\"PRIEST\",\"DRUID\",\"PALADIN\",\"SHAMAN\",\"WARLOCK\"}) do\nTEST.macros = {}; TEST.known = {}; TEST.names = {}; TEST.entries = {}; TEST.class = class\nForeverMacrosDB = nil; TEST.learnAll(class); TEST.login()\nfor id in pairs(ForeverMacrosDB.managed) do\n local def = FM.Core.FindDefinition(id); assert(def.class == \"ALL\" or def.class == class)\nend\nassert(TEST.named(\"FM Stop\"))\nend"
+  ],
+  [
+    "hunter sequence: all learned abilities create a native sequence",
+    "TEST.learn(75, \"Auto Shot\"); TEST.learn(1978, \"Serpent Sting\"); TEST.learn(3044, \"Arcane Shot\")\nTEST.login(); local macro = assert(TEST.named(\"FM HuntSeq\"))\nassert(macro.character)\nassert(macro.body:find(\"/cast [harm,nodead] !Auto Shot\", 1, true))\nassert(macro.body:find(\"reset=target/combat/alt Serpent Sting, Arcane Shot, Arcane Shot, Arcane Shot\", 1, true))\nassert(not macro.body:find(\"null\", 1, true))\nassert(not macro.body:find(\"Hunter's Mark\", 1, true))\nassert(not macro.body:find(\"/targetenemy\", 1, true))\n"
+  ],
+  [
+    "hunter sequence: missing ability 75 prevents creation",
+    "TEST.learn(75, \"Auto Shot\"); TEST.learn(1978, \"Serpent Sting\"); TEST.learn(3044, \"Arcane Shot\")\nTEST.known[75] = false; TEST.login(); assert(not TEST.named(\"FM HuntSeq\"))"
+  ],
+  [
+    "hunter sequence: missing ability 1978 prevents creation",
+    "TEST.learn(75, \"Auto Shot\"); TEST.learn(1978, \"Serpent Sting\"); TEST.learn(3044, \"Arcane Shot\")\nTEST.known[1978] = false; TEST.login(); assert(not TEST.named(\"FM HuntSeq\"))"
+  ],
+  [
+    "hunter sequence: missing ability 3044 prevents creation",
+    "TEST.learn(75, \"Auto Shot\"); TEST.learn(1978, \"Serpent Sting\"); TEST.learn(3044, \"Arcane Shot\")\nTEST.known[3044] = false; TEST.login(); assert(not TEST.named(\"FM HuntSeq\"))"
+  ],
+  [
+    "hunter sequence: training the final requirement adds it once",
+    "TEST.learn(75, \"Auto Shot\"); TEST.learn(1978, \"Serpent Sting\"); TEST.login()\nassert(not TEST.named(\"FM HuntSeq\"))\nTEST.learn(3044, \"Arcane Shot\"); TEST.fire(\"SPELLS_CHANGED\"); TEST.flush()\nassert(TEST.named(\"FM HuntSeq\")); local count = TEST.writes\nTEST.login(); assert(TEST.writes == count)\n"
+  ],
+  [
+    "hunter sequence: localized names and higher ranks are used",
+    "TEST.locale = \"deDE\"\nTEST.names[75] = \"Automatischer Schuss\"; TEST.learn(990075, \"Automatischer Schuss\")\nTEST.names[1978] = \"Schlangenbiss\"; TEST.learn(991978, \"Schlangenbiss\")\nTEST.names[3044] = \"Arkaner Schuss\"; TEST.learn(993044, \"Arkaner Schuss\")\nTEST.login(); local body = assert(TEST.named(\"FM HuntSeq\")).body\nassert(body:find(\"!Automatischer Schuss\", 1, true))\nassert(body:find(\"Schlangenbiss, Arkaner Schuss, Arkaner Schuss, Arkaner Schuss\", 1, true))\n"
+  ],
+  [
+    "hunter sequence: an existing character upgrades without changing managed macros",
+    "TEST.learn(75, \"Auto Shot\"); TEST.learn(1130, \"Hunter's Mark\"); TEST.login()\nlocal existing = assert(TEST.named(\"FM MarkPet\")); existing.body = \"/say personal edit\"\nTEST.learn(1978, \"Serpent Sting\"); TEST.learn(3044, \"Arcane Shot\"); TEST.login()\nassert(TEST.named(\"FM HuntSeq\"))\nassert(TEST.named(\"FM MarkPet\").body == \"/say personal edit\")\n"
+  ]
+]

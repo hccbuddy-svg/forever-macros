@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+scanner="$(git config --get foreverMacros.gitleaksPath || true)"
+if [ -z "$scanner" ]; then scanner=gitleaks; fi
+exec "$scanner" git --log-opts=--all --redact=100 --no-banner --ignore-gitleaks-allow --max-decode-depth 5 .

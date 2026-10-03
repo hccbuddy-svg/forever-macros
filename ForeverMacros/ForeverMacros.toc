@@ -1,0 +1,17 @@
+## Interface: 16001
+## Title: Forever Macros
+## Notes: Class macro library, teammate assignments, gear presets, and optional timer reminders.
+## Version: 0.4.1
+## SavedVariablesPerCharacter: ForeverMacrosDB
+## OptionalDeps: DBM-Core
+Catalog.lua
+PvP.lua
+Attacks.lua
+Library.lua
+Core.lua
+Managed.lua
+WoW.lua
+Manager.lua
+Gear.lua
+Alerts.lua
+UI.lua
