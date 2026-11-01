@@ -14,7 +14,7 @@ git config core.hooksPath .githooks
 
 Gitleaks must be on PATH. To use a binary elsewhere, set `git config foreverMacros.gitleaksPath /path/to/gitleaks`. The pre-commit hook scans staged changes. The pre-push hook scans all local Git history. Either hook stops if the scanner is missing or finds a possible secret.
 
-GitHub Actions runs the addon tests and scans the full fetched history, working files, and generated ZIP. The workflow uses a pinned scanner release with a checked SHA-256 checksum. Scanner output redacts detected values. These checks reduce disclosure risk but cannot guarantee that every possible secret will be recognized.
+GitHub Actions runs the addon tests and scans the full fetched history, working files, and generated ZIP on self-hosted macOS and Windows runners. See docs/CI.md. The workflow uses a pinned scanner release with a checked SHA-256 checksum. Scanner output redacts detected values. These checks reduce disclosure risk but cannot guarantee that every possible secret will be recognized.
 
 ## Reporting a problem
 
