@@ -31,11 +31,15 @@ function Core.FindDefinition(id)
 end
 
 function Core.Render(definition, resolve)
+    if definition.blocked then return nil, definition.blocked end
     local names = {}
     for index, requirement in ipairs(definition.spells) do
         local name = resolve(requirement)
         if type(name) ~= "string" or name == "" or name:find("[\r\n;%[%]]") then
             return nil, "Ability not learned or name unavailable: " .. requirement.english
+        end
+        if definition.sequenceNames and name:find("[,|{}]") then
+            return nil, "Spell name contains a sequence separator."
         end
         names[index] = name
     end

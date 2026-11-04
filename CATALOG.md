@@ -1,8 +1,10 @@
 # Macro catalog
 
-363 templates across nine Classic classes and general utility, including 243 optional additions.
+391 templates across nine Classic classes and general utility, including 239 optional additions.
 Starter and attack templates install automatically for the current class and learned abilities while character slots remain. Choose other templates in /fm. English examples are shown here; names are checked against the learned spellbook.
 These patterns have not yet been validated in-game on Forever.
+
+FM Auto sequence examples show the fullest starter recipe. At runtime, only learned abilities are selected; some steps prefer an upgrade or fallback. These bounded openers stop at null. They are not live optimal rotations. The separate workshop has nine editable class starters and eight custom slots; user-created slots are not part of this static catalog.
 
 Form and stance numbers below are examples. The addon resolves each character's actual slots when generating a macro.
 
@@ -475,7 +477,7 @@ Attack behavior: Melee in matching form, outside stealth.
 
 ### FM ShiftingPower
 
-Template ID: druid_shiftingpower. Use Shifting Power while already in Cat Form. Spends mana for energy. Does not shift forms or start attacks.
+Template ID: druid_shiftingpower. Use Shifting Power while already in Cat Form. Spends mana for energy. The game rejects it at full energy. Does not shift forms or start attacks.
 
 Installation: Choose in /fm. Teammate assignment: no.
 
@@ -567,21 +569,21 @@ Attack behavior: No attack-start command.
 
 ### FM Prowl
 
-Template ID: druid_prowl. Press to attempt Prowl. Requires the learned ability.
+Template ID: druid_prowl. Stop attacking and enter Prowl only while already in Cat Form outside combat. Repeated presses leave Prowl active. Does not shift forms.
 
 Installation: Choose in /fm. Teammate assignment: no.
 
-Attack behavior: No attack-start command.
+Attack behavior: Stop attacks; enter stealth in Cat Form.
 
 ```text
 #showtooltip Prowl
 /stopattack
-/cast  Prowl
+/cast [form:3,nocombat,nostealth] !Prowl
 ```
 
 ### FM Dash
 
-Template ID: druid_dash. Press to attempt Dash. Requires the learned ability.
+Template ID: druid_dash. Use Dash while already in Cat Form. Does not shift forms, cancel Prowl, or start attacks.
 
 Installation: Choose in /fm. Teammate assignment: no.
 
@@ -589,7 +591,7 @@ Attack behavior: No attack-start command.
 
 ```text
 #showtooltip Dash
-/cast  Dash
+/cast [form:3] Dash
 ```
 
 ### FM Growl
@@ -629,6 +631,65 @@ Attack behavior: No attack-start command.
 ```text
 #showtooltip Tranquility
 /cast [nochanneling] Tranquility
+```
+
+### FM AutoOpen
+
+Template ID: auto_druid_open. Caster-form ranged opener. Change form manually afterward. Learned steps only. One press per cast; stops at the end. Alt resets. Changing target or leaving combat also resets. A fixed starter, not a live optimal rotation.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/castsequence [noform,harm,nodead] reset=target/combat/alt Wrath,Moonfire,null
+```
+
+### FM AutoPrep
+
+Template ID: auto_druid_prep. Self preparation outside combat in caster form. Learned steps only. One press per cast; stops at the end. Alt resets. Ten seconds without pressing also resets. A fixed starter, not a live optimal rotation.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/stopmacro [combat]
+/castsequence [noform,@player] reset=10/alt Mark of the Wild,Thorns,null
+```
+
+### FM AutoCat
+
+Template ID: auto_druid_cat. Cat opener outside Prowl. Use stealth openers and combo-point finishers separately. Learned steps only. One press per cast; stops at the end. Alt resets. Changing target or leaving combat also resets. A fixed starter, not a live optimal rotation.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: Melee on current enemy with form and stealth guards.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/startattack [form:3,nostealth,harm,nodead]
+/castsequence [form:3,nostealth,harm,nodead] reset=target/combat/alt Rake,Claw,null
+```
+
+### FM AutoBear
+
+Template ID: auto_druid_bear. Bear multi-target opener. Swipe can hit nearby enemies; use only when that is intended. Learned steps only. One press per cast; stops at the end. Alt resets. Changing target or leaving combat also resets. A fixed starter, not a live optimal rotation.
+
+Installation: Choose in /fm. Teammate assignment: no.
+
+Attack behavior: Melee on current enemy with form and stealth guards.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/startattack [form:1,harm,nodead]
+/castsequence [form:1,harm,nodead] reset=target/combat/alt Demoralizing Roar,Swipe,null
 ```
 
 ## HUNTER
@@ -1866,6 +1927,52 @@ Attack behavior: Pet chooses nearby enemies after activation.
 /petaggressive [pet]
 ```
 
+### FM Easy
+
+Template ID: auto_hunter_easy. Pet + Auto Shot. Cycle Sting and three Arcanes; with Summon Hawk, Sting, two Hawks, Arcane. Shared cooldowns pause casting. Aspect, Mend Pet and Aimed Shot stay separate. Repeat presses. Target/combat end/Alt resets. Mana, range or cooldowns may pause a step. Fixed routine.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: Pet attack and learned Auto Shot on current living enemy.
+
+```text
+#showtooltip
+/stopmacro [channeling][noharm][dead]
+/petattack
+/cast !Auto Shot
+/castsequence reset=target/combat/alt Serpent Sting,Summon Hawk,Summon Hawk,Arcane Shot
+```
+
+### FM AutoOpen
+
+Template ID: auto_hunter_open. Ranged opener. Auto Shot starts if learned; send your pet separately. Learned steps only. One press per cast; stops at the end. Alt resets. Changing target or leaving combat also resets. A fixed starter, not a live optimal rotation.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: Ranged Auto Shot if learned; no pet command.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/cast [harm,nodead] !Auto Shot
+/castsequence [harm,nodead] reset=target/combat/alt Serpent Sting,Arcane Shot,null
+```
+
+### FM AutoPrep
+
+Template ID: auto_hunter_prep. Ranged preparation. Change aspect manually for travel or melee. Learned steps only. One press per cast; stops at the end. Alt resets. Ten seconds without pressing also resets. A fixed starter, not a live optimal rotation.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/stopmacro [combat]
+/castsequence [@player] reset=10/alt Aspect of the Hawk,null
+```
+
 ## MAGE
 
 ### FM Counter
@@ -2021,7 +2128,7 @@ Attack behavior: No attack-start command.
 
 ### FM Wand
 
-Template ID: mage_wand. Start wand shooting at your current enemy without toggling it off. Use this separate button between spells.
+Template ID: mage_wand. Attempt wand shooting at your current enemy with !Shoot. Repeat-press behavior has an open Forever beta bug report; test it on your build. Use this separate button between spells.
 
 Installation: Automatic starter. Teammate assignment: no.
 
@@ -2186,6 +2293,35 @@ Attack behavior: No attack-start command.
 ```text
 #showtooltip Ice Block
 /cancelaura Ice Block
+```
+
+### FM AutoOpen
+
+Template ID: auto_mage_open. Ranged solo pull using the learned slow when available. Continue with your chosen filler afterward. Learned steps only. One press per cast; stops at the end. Alt resets. Changing target or leaving combat also resets. A fixed starter, not a live optimal rotation.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/castsequence [harm,nodead] reset=target/combat/alt Frostbolt,null
+```
+
+### FM AutoPrep
+
+Template ID: auto_mage_prep. Solo preparation. Uses Ice Armor when learned; choose Mage Armor separately if preferred. Learned steps only. One press per cast; stops at the end. Alt resets. Ten seconds without pressing also resets. A fixed starter, not a live optimal rotation.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/stopmacro [combat]
+/castsequence [@player] reset=10/alt Arcane Intellect,Ice Armor,null
 ```
 
 ## PALADIN
@@ -2381,41 +2517,46 @@ Attack behavior: Melee on current enemy.
 
 ### FM Consecrate
 
-Template ID: paladin_consecration. Press to attempt Consecration. Requires the learned ability.
+Template ID: paladin_consecration. Attempt Consecration at your feet. Also start melee swings at a living selected enemy, even if the spell cannot cast.
 
-Installation: Choose in /fm. Teammate assignment: no.
+Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: No attack-start command.
+Attack behavior: Melee on current enemy.
 
 ```text
 #showtooltip Consecration
 /cast  Consecration
+/startattack [harm,nodead]
 ```
 
 ### FM Exorcism
 
-Template ID: paladin_exorcism. Shift: focus. Otherwise hostile mouseover, then your target.
+Template ID: paladin_exorcism. Shift-focus, then hostile mouseover, then target. Only the target branch starts melee swings, including when the spell cannot cast.
 
-Installation: Choose in /fm. Teammate assignment: no.
+Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: No attack-start command.
+Attack behavior: Melee on target branch only.
 
 ```text
 #showtooltip Exorcism
 /cast [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead][harm,nodead] Exorcism
+/stopmacro [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead]
+/startattack [harm,nodead]
 ```
 
 ### FM HammerWrath
 
-Template ID: paladin_wrath. Shift: focus. Otherwise hostile mouseover, then your target.
+Template ID: paladin_wrath. Shift-focus, then hostile mouseover, then target. Only the target branch starts melee swings, including when the spell cannot cast.
 
-Installation: Choose in /fm. Teammate assignment: no.
+Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: No attack-start command.
+Attack behavior: Melee on target branch only.
 
 ```text
 #showtooltip Hammer of Wrath
 /cast [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead][harm,nodead] Hammer of Wrath
+/stopmacro [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead]
+/startattack [harm,nodead]
 ```
 
 ### FM HolyShock
@@ -2433,15 +2574,17 @@ Attack behavior: No attack-start command.
 
 ### FM ShockEnemy
 
-Template ID: paladin_holyshock_enemy. Shift: focus. Otherwise hostile mouseover, then your target.
+Template ID: paladin_holyshock_enemy. Shift-focus, then hostile mouseover, then target. Only the target branch starts melee swings, including when the spell cannot cast.
 
-Installation: Choose in /fm. Teammate assignment: no.
+Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: No attack-start command.
+Attack behavior: Melee on target branch only.
 
 ```text
 #showtooltip Holy Shock
 /cast [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead][harm,nodead] Holy Shock
+/stopmacro [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead]
+/startattack [harm,nodead]
 ```
 
 ### FM Might
@@ -2481,45 +2624,6 @@ Attack behavior: No attack-start command.
 ```text
 #showtooltip Blessing of Kings
 /cast [mod:alt,@player][@mouseover,help,nodead][help,nodead][@player] Blessing of Kings
-```
-
-### FM Salvation
-
-Template ID: paladin_salvation. Alt: self. Otherwise friendly mouseover, target, then self. Supports teammate assignment.
-
-Installation: Choose in /fm. Teammate assignment: yes.
-
-Attack behavior: No attack-start command.
-
-```text
-#showtooltip Blessing of Salvation
-/cast [mod:alt,@player][@mouseover,help,nodead][help,nodead][@player] Blessing of Salvation
-```
-
-### FM Light
-
-Template ID: paladin_light. Alt: self. Otherwise friendly mouseover, target, then self. Supports teammate assignment.
-
-Installation: Choose in /fm. Teammate assignment: yes.
-
-Attack behavior: No attack-start command.
-
-```text
-#showtooltip Blessing of Light
-/cast [mod:alt,@player][@mouseover,help,nodead][help,nodead][@player] Blessing of Light
-```
-
-### FM Sanctuary
-
-Template ID: paladin_sanctuary. Alt: self. Otherwise friendly mouseover, target, then self. Supports teammate assignment.
-
-Installation: Choose in /fm. Teammate assignment: yes.
-
-Attack behavior: No attack-start command.
-
-```text
-#showtooltip Blessing of Sanctuary
-/cast [mod:alt,@player][@mouseover,help,nodead][help,nodead][@player] Blessing of Sanctuary
 ```
 
 ### FM SealRight
@@ -2585,6 +2689,53 @@ Attack behavior: No attack-start command.
 ```text
 #showtooltip Divine Shield
 /cancelaura Divine Shield
+```
+
+### FM Easy
+
+Template ID: auto_paladin_easy. Righteousness once per target, melee, then Judgement and Holy Strike. Off-GCD Judgement preserves the seal. Buff with FM AutoPrep. Reset after manually changing your seal. Repeat presses. Target/combat end/Alt resets. Mana, range or cooldowns may pause a step. Fixed routine.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: Melee on current living enemy.
+
+```text
+#showtooltip
+/stopmacro [channeling][noharm][dead]
+/castsequence [@player] reset=target/combat/alt Seal of Righteousness,null
+/startattack
+/cast Judgement
+/cast Holy Strike
+```
+
+### FM AutoOpen
+
+Template ID: auto_paladin_open. Seal then judge on a living enemy. Forever Judgement does not consume the seal. Learned steps only. One press per cast; stops at the end. Alt resets. Changing target or leaving combat also resets. A fixed starter, not a live optimal rotation.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: Melee on current enemy with form and stealth guards.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/startattack [harm,nodead]
+/castsequence [harm,nodead] reset=target/combat/alt Seal of Righteousness,Judgement,null
+```
+
+### FM AutoPrep
+
+Template ID: auto_paladin_prep. Solo melee preparation. Other blessings or auras may suit your group better. Learned steps only. One press per cast; stops at the end. Alt resets. Ten seconds without pressing also resets. A fixed starter, not a live optimal rotation.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/stopmacro [combat]
+/castsequence [@player] reset=10/alt Blessing of Might,Devotion Aura,null
 ```
 
 ## PRIEST
@@ -2764,7 +2915,7 @@ Attack behavior: No attack-start command.
 
 ### FM Wand
 
-Template ID: priest_wand. Start wand shooting at your current enemy without toggling it off. Use this separate button between spells.
+Template ID: priest_wand. Attempt wand shooting at your current enemy with !Shoot. Repeat-press behavior has an open Forever beta bug report; test it on your build. Use this separate button between spells.
 
 Installation: Automatic starter. Teammate assignment: no.
 
@@ -2851,6 +3002,34 @@ Attack behavior: No attack-start command.
 ```text
 #showtooltip Mind Flay
 /cast [nochanneling,harm,nodead] Mind Flay
+```
+
+### FM PenanceHeal
+
+Template ID: priest_penance_heal. Heal with Penance. Alt: self, then friendly mouseover, target, self. Supports teammate assignment. Waits for any current channel to finish.
+
+Installation: Choose in /fm. Teammate assignment: yes.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip Penance
+/stopmacro [channeling]
+/cast [mod:alt,@player][@mouseover,help,nodead][help,nodead][@player] Penance
+```
+
+### FM PenanceHarm
+
+Template ID: priest_penance_harm. Damage with Penance. Shift: hostile focus, then hostile mouseover, target. Waits for any current channel to finish. Does not start melee or wand attacks.
+
+Installation: Choose in /fm. Teammate assignment: no.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip Penance
+/stopmacro [channeling]
+/cast [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead][harm,nodead] Penance
 ```
 
 ### FM GreaterHeal
@@ -2943,6 +3122,50 @@ Attack behavior: No attack-start command.
 ```text
 #showtooltip Fade
 /cast  Fade
+```
+
+### FM Easy
+
+Template ID: auto_priest_easy. Self shield once per target, then Penance/Mind Blast, Pain and four Smites. Learning Mind Flay switches to shadow spells. Channels protected; use a separate wand key to conserve mana. Repeat presses. Target/combat end/Alt resets. Mana, range or cooldowns may pause a step. Fixed routine.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip
+/stopmacro [channeling][noharm][dead]
+/castsequence [@player] reset=target/combat/alt Power Word: Shield,null
+/castsequence reset=target/combat/alt Mind Blast,Shadow Word: Pain,Mind Flay,Mind Flay,Mind Flay,Mind Flay
+```
+
+### FM AutoOpen
+
+Template ID: auto_priest_open. Caster opener before wand or filler attacks. Use shadow attacks separately in Shadowform. Learned steps only. One press per cast; stops at the end. Alt resets. Changing target or leaving combat also resets. A fixed starter, not a live optimal rotation.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/castsequence [noform,harm,nodead] reset=target/combat/alt Holy Fire,Shadow Word: Pain,null
+```
+
+### FM AutoPrep
+
+Template ID: auto_priest_prep. Self preparation outside combat. Learned steps only. One press per cast; stops at the end. Alt resets. Ten seconds without pressing also resets. A fixed starter, not a live optimal rotation.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/stopmacro [combat]
+/castsequence [@player] reset=10/alt Power Word: Fortitude,Inner Fire,null
 ```
 
 ## ROGUE
@@ -3213,6 +3436,48 @@ Attack behavior: Melee on current enemy.
 /cast [harm,nodead] Slice and Dice
 ```
 
+### FM Mutilate
+
+Template ID: rogue_mutilate. Current enemy only. Starts melee swings even when the spell cannot cast. Protects Stealth on failed casts.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: Melee on current enemy.
+
+```text
+#showtooltip Mutilate
+/startattack [nostealth,harm,nodead]
+/cast [harm,nodead] Mutilate
+```
+
+### FM Venom
+
+Template ID: rogue_venom. Current enemy only. Starts melee swings even when the spell cannot cast. Protects Stealth on failed casts.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: Melee on current enemy.
+
+```text
+#showtooltip Venom
+/startattack [nostealth,harm,nodead]
+/cast [harm,nodead] Venom
+```
+
+### FM GhostlyStrike
+
+Template ID: rogue_ghostly. Current enemy only. Starts melee swings even when the spell cannot cast. Protects Stealth on failed casts.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: Melee on current enemy.
+
+```text
+#showtooltip Ghostly Strike
+/startattack [nostealth,harm,nodead]
+/cast [harm,nodead] Ghostly Strike
+```
+
 ### FM Ambush
 
 Template ID: rogue_ambush. Stealthed current enemy only. No auto attack before the opener.
@@ -3354,6 +3619,36 @@ Attack behavior: No attack-start command.
 ```text
 #showtooltip Shoot Crossbow
 /cast [harm,nodead] Shoot Crossbow
+```
+
+### FM AutoOpen
+
+Template ID: auto_rogue_open. Begin outside stealth: build one combo point, then Slice and Dice. Open from stealth separately. Learned steps only. One press per cast; stops at the end. Alt resets. Changing target or leaving combat also resets. A fixed starter, not a live optimal rotation.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: Melee on current enemy with form and stealth guards.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/startattack [nostealth,harm,nodead]
+/castsequence [nostealth,harm,nodead] reset=target/combat/alt Sinister Strike,Slice and Dice,null
+```
+
+### FM AutoPrep
+
+Template ID: auto_rogue_prep. Enter stealth before a pull. This does not select a stealth opener. Learned steps only. One press per cast; stops at the end. Alt resets. Ten seconds without pressing also resets. A fixed starter, not a live optimal rotation.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/stopmacro [combat]
+/castsequence [@player] reset=10/alt Stealth,null
 ```
 
 ## SHAMAN
@@ -3630,15 +3925,15 @@ Attack behavior: No attack-start command.
 
 ### FM ElemMastery
 
-Template ID: shaman_mastery. Press to attempt Elemental Mastery. Requires the learned ability.
+Template ID: shaman_mastery. Press to attempt Lightning Mastery. Requires the learned ability.
 
 Installation: Choose in /fm. Teammate assignment: no.
 
 Attack behavior: No attack-start command.
 
 ```text
-#showtooltip Elemental Mastery
-/cast  Elemental Mastery
+#showtooltip Lightning Mastery
+/cast  Lightning Mastery
 ```
 
 ### FM NatSwift
@@ -3682,15 +3977,15 @@ Attack behavior: No attack-start command.
 
 ### FM FireNova
 
-Template ID: shaman_firenova. Press to attempt Fire Nova Totem. Requires the learned ability.
+Template ID: shaman_firenova. Press to attempt Fire Nova. Requires the learned ability.
 
 Installation: Choose in /fm. Teammate assignment: no.
 
 Attack behavior: No attack-start command.
 
 ```text
-#showtooltip Fire Nova Totem
-/cast  Fire Nova Totem
+#showtooltip Fire Nova
+/cast  Fire Nova
 ```
 
 ### FM ManaSpring
@@ -3810,6 +4105,80 @@ Attack behavior: No attack-start command.
 /cast  Disease Cleansing Totem
 ```
 
+### FM Easy
+
+Template ID: auto_shaman_easy. Shield once per target, melee, then learned Flame Shock, Stormstrike and Earth Shock. Earlier fallback: Lightning Bolt. Refreshing an active shield spends mana. Totems and weapon imbues stay separate. Repeat presses. Target/combat end/Alt resets. Mana, range or cooldowns may pause a step. Fixed routine.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: Melee on current living enemy.
+
+```text
+#showtooltip
+/stopmacro [channeling][noharm][dead]
+/castsequence [@player] reset=target/combat/alt Lightning Shield,null
+/startattack
+/castsequence reset=target/combat/alt Flame Shock,Stormstrike,Earth Shock
+```
+
+### FM Totems
+
+Template ID: auto_shaman_totems. Drops your saved Call of the Elements set with one cast. Configure that set in the game's totem bar first. Press only when you want to spend mana on that set; it is separate from FM Easy.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/cast Call of the Elements
+```
+
+### FM Recall
+
+Template ID: auto_shaman_recall. Recall your totems on a deliberate keypress. Never recalled automatically during a pull.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/cast Totemic Recall
+```
+
+### FM AutoOpen
+
+Template ID: auto_shaman_open. Pull with Lightning Bolt, then the learned shock. Starts melee swings when in reach. Keep interrupts separate. Learned steps only. One press per cast; stops at the end. Alt resets. Changing target or leaving combat also resets. A fixed starter, not a live optimal rotation.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: Melee on current enemy with form and stealth guards.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/startattack [harm,nodead]
+/castsequence [harm,nodead] reset=target/combat/alt Lightning Bolt,Flame Shock,null
+```
+
+### FM AutoPrep
+
+Template ID: auto_shaman_prep. Solo preparation. Choose other shields manually when appropriate. Learned steps only. One press per cast; stops at the end. Alt resets. Ten seconds without pressing also resets. A fixed starter, not a live optimal rotation.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/stopmacro [combat]
+/castsequence [@player] reset=10/alt Lightning Shield,null
+```
+
 ## WARLOCK
 
 ### FM PetAttack
@@ -3880,15 +4249,15 @@ Attack behavior: No attack-start command.
 
 ### FM Agony
 
-Template ID: warlock_agony. Curse of Agony on a hostile mouseover, target, or Shift-focus.
+Template ID: warlock_agony. Bane of Agony on a hostile mouseover, target, or Shift-focus.
 
 Installation: Automatic starter. Teammate assignment: no.
 
 Attack behavior: No attack-start command.
 
 ```text
-#showtooltip Curse of Agony
-/cast [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead][harm,nodead] Curse of Agony
+#showtooltip Bane of Agony
+/cast [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead][harm,nodead] Bane of Agony
 ```
 
 ### FM HealthFunnel
@@ -4040,7 +4409,7 @@ Attack behavior: Pet chooses nearby enemies after activation.
 
 ### FM Wand
 
-Template ID: warlock_wand. Start wand shooting at your current enemy without toggling it off. Use this separate button between spells.
+Template ID: warlock_wand. Attempt wand shooting at your current enemy with !Shoot. Repeat-press behavior has an open Forever beta bug report; test it on your build. Use this separate button between spells.
 
 Installation: Automatic starter. Teammate assignment: no.
 
@@ -4177,8 +4546,8 @@ Installation: Choose in /fm. Teammate assignment: no.
 Attack behavior: No attack-start command.
 
 ```text
-#showtooltip Curse of Doom
-/cast [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead][harm,nodead] Curse of Doom
+#showtooltip Bane of Doom
+/cast [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead][harm,nodead] Bane of Doom
 ```
 
 ### FM DrainLife
@@ -4311,6 +4680,35 @@ Attack behavior: No attack-start command.
 /cast [mod:alt,@player][@mouseover,help,nodead][help,nodead][@player] Detect Invisibility
 ```
 
+### FM AutoOpen
+
+Template ID: auto_warlock_open. Short solo damage opener. Send your pet separately; then use filler, wand or drains manually. Learned steps only. One press per cast; stops at the end. Alt resets. Changing target or leaving combat also resets. A fixed starter, not a live optimal rotation.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/castsequence [harm,nodead] reset=target/combat/alt Corruption,Immolate,Shadow Bolt,null
+```
+
+### FM AutoPrep
+
+Template ID: auto_warlock_prep. Self preparation. Uses the learned armor upgrade. Learned steps only. One press per cast; stops at the end. Alt resets. Ten seconds without pressing also resets. A fixed starter, not a live optimal rotation.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/stopmacro [combat]
+/castsequence [@player] reset=10/alt Demon Armor,Unending Breath,null
+```
+
 ## WARRIOR
 
 ### FM Charge
@@ -4330,15 +4728,17 @@ Attack behavior: Melee on target branch only.
 
 ### FM Taunt
 
-Template ID: warrior_taunt. Taunt your hostile mouseover, target, or Shift-focus if usable.
+Template ID: warrior_taunt. Shift-focus, then hostile mouseover, then target. Only the target branch starts melee swings, including when the spell cannot cast.
 
 Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: No attack-start command.
+Attack behavior: Melee on target branch only.
 
 ```text
 #showtooltip Taunt
 /cast [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead][harm,nodead] Taunt
+/stopmacro [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead]
+/startattack [harm,nodead]
 ```
 
 ### FM Pummel
@@ -4888,4 +5288,34 @@ Attack behavior: No attack-start command.
 ```text
 #showtooltip Shoot Crossbow
 /cast [harm,nodead] Shoot Crossbow
+```
+
+### FM AutoOpen
+
+Template ID: auto_warrior_open. Melee opener. Build rage and use a compatible stance first. Learned steps only. One press per cast; stops at the end. Alt resets. Changing target or leaving combat also resets. A fixed starter, not a live optimal rotation.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: Melee on current enemy with form and stealth guards.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/startattack [harm,nodead]
+/castsequence [harm,nodead] reset=target/combat/alt Rend,Sunder Armor,null
+```
+
+### FM AutoPrep
+
+Template ID: auto_warrior_prep. Self preparation. Battle Shout needs rage. Learned steps only. One press per cast; stops at the end. Alt resets. Ten seconds without pressing also resets. A fixed starter, not a live optimal rotation.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip
+/stopmacro [channeling]
+/stopmacro [combat]
+/castsequence [@player] reset=10/alt Battle Shout,null
 ```

@@ -1,4 +1,10 @@
-# Attack behavior audit, October 3, 2026
+# Attack behavior audit, October 10, 2026
+
+Version 0.6.0 adds automatic learned Mutilate, Venom and Ghostly Strike macros with Stealth guards. Their talent IDs come from the attributed October 8 Forever tree snapshot in TalentData.lua, rather than Retail IDs. Exorcism, Hammer of Wrath, hostile Holy Shock and Consecration become automatic attack templates. Warrior Taunt gains attack start on its ordinary selected-target branch. Focus and mouseover branches stop before the swing command. Friendly Holy Shock stays a healing button.
+
+Earth Shock already has the target-only attack start shown below. Every primary melee start-attack template now qualifies for creation after its spell is learned. The combined Hunter MeleeWeave button remains optional because it cancels casting; Raptor Strike and Mongoose Bite install as individual attacks. Learning during combat waits until combat ends. A higher spell rank normally retains the same rankless macro text and action-bar reference. The addon preserves personal edits, respects reserved slots and never removes an existing macro to create space.
+
+The October 10 client check found build 1.60.1.70338. Its relevant command handlers are unchanged from the prior build comparison documented in RESEARCH.md. The earlier records below retain their original version context.
 
 Version 0.4.1 adds a Battle Stance guard to both commands in the new Spearing Strike button. Shifting Power casts only while already in Cat Form and does not start attacks or change form. Hunter and Warlock Aggressive mode is an optional pet command that can cause the pet to attack nearby enemies after activation. No existing template switches to Aggressive.
 
@@ -44,4 +50,4 @@ Current beta notes say traps can be placed in combat and Wyvern Sting was remove
 
 ## Verification
 
-All 172 mocked checks pass. They cover target conditions, failed spell attempts, skills learned during combat, later slot availability, ownership, and update loops. The October cases also check the new stance and form guards, explicit pet-mode selection, and corrected pet ranks. They do not reproduce the combat engine. See VALIDATION.md for the live checklist and RESEARCH.md for source coverage and access limits.
+All 375 mocked checks pass. Attack cases cover target conditions, failed spell attempts, stealth and form guards, skills learned during combat, higher ranks, later slot availability, ownership and update loops. They also cover the Paladin and Taunt target branches, optional pet-mode selection and corrected pet ranks. They do not reproduce the combat engine. Version 0.10.0 adds FM Easy for four classes, including Shaman shield and damage sequences, Paladin seal/Judgement correction, Priest channel protection, and Hunter pet/Auto Shot plus fixed shots. A top-level guard stops these buttons on friendly, dead or absent targets and during channels. Shaman totems and Recall require separate keys. See VALIDATION.md for the full results and live checklist, and RESEARCH.md for source coverage and access limits.

@@ -1,17 +1,28 @@
 ## Interface: 16001
 ## Title: Forever Macros
-## Notes: Class macro library, teammate assignments, gear presets, and optional timer reminders.
-## Version: 0.4.1
+## Notes: Class macros, sequence workshop, talent coach, bag tools, teammate assignments, gear presets, and timer reminders.
+## Version: 0.11.0
 ## SavedVariablesPerCharacter: ForeverMacrosDB
-## OptionalDeps: DBM-Core
+## OptionalDeps: DBM-Core, WhatsTraining, BlizzMove, ElvUI
 Catalog.lua
 PvP.lua
 Attacks.lua
 Library.lua
+AutoSequences.lua
 Core.lua
 Managed.lua
 WoW.lua
 Manager.lua
+Workshop.lua
+TalentData.lua
+Advisor.lua
+Coach.lua
+Bags.lua
+WindowMover.lua
+Layout.lua
 Gear.lua
 Alerts.lua
+WorkshopUI.lua
+CoachUI.lua
+TrainingUI.lua
 UI.lua

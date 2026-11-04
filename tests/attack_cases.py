@@ -9,7 +9,7 @@ local friendly={exists=true,harm=false,dead=false}
 local dead={exists=true,harm=true,dead=true}
 local function render(id) return assert(FM.Core.Render(FM.Core.FindDefinition(id),function(r) return r.english end)) end
 '''
-for ability in ["shaman_shock", "shaman_frostshock", "warrior_charge", "warrior_pummel", "warrior_intercept", "warrior_disarm", "warrior_hamstring", "warrior_shieldbash", "rogue_kick", "rogue_kidney", "hunter_wingclip", "paladin_hammer"]:
+for ability in ["shaman_shock", "shaman_frostshock", "warrior_charge", "warrior_pummel", "warrior_intercept", "warrior_disarm", "warrior_hamstring", "warrior_shieldbash", "rogue_kick", "rogue_kidney", "hunter_wingclip", "paladin_hammer", "paladin_exorcism", "paladin_wrath", "paladin_holyshock_enemy", "warrior_taunt"]:
     case(ability + ": target swings while focus and mouseover do not start swings", SETUP + f'''
 local body=render("{ability}")
 local actions=TEST.macroModel(body,{{target=enemy}})
@@ -29,7 +29,7 @@ assert(#TEST.actionsOf(a,"startattack")==1 and TEST.actionsOf(a,"cast")[1].unit=
 ''')
 
 case("attack commands remain eligible even when the spell is on cooldown", SETUP + '''
-for _, id in ipairs({"shaman_shock","shaman_flameshock","shaman_stormstrike","warrior_execute","rogue_backstab","paladin_judgement"}) do
+for _, id in ipairs({"shaman_shock","shaman_flameshock","shaman_stormstrike","warrior_execute","rogue_backstab","paladin_judgement","paladin_exorcism","paladin_wrath","paladin_holyshock_enemy","paladin_consecration","warrior_taunt","rogue_mutilate","rogue_venom","rogue_ghostly"}) do
  local actions=TEST.macroModel(render(id),{target=enemy,spellUnavailable=true})
  assert(#TEST.actionsOf(actions,"startattack")==1, id)
 end
@@ -44,7 +44,7 @@ for _, id in ipairs({"shaman_flameshock","shaman_stormstrike","warrior_heroic","
 end
 ''')
 case("rogue damage does not start auto attacks from stealth on failed casts", SETUP + '''
-for _, id in ipairs({"rogue_sinister","rogue_backstab","rogue_eviscerate","rogue_hemorrhage","rogue_kick","rogue_kidney"}) do
+for _, id in ipairs({"rogue_sinister","rogue_backstab","rogue_eviscerate","rogue_hemorrhage","rogue_kick","rogue_kidney","rogue_mutilate","rogue_venom","rogue_ghostly"}) do
  assert(#TEST.actionsOf(TEST.macroModel(render(id),{target=enemy,stealth=true,spellUnavailable=true}),"startattack")==0,id)
 end
 ''')

@@ -10,6 +10,11 @@ CASES += runpy.run_path(str(ROOT / "tests" / "expansion_cases.py"))["CASES"]
 CASES += runpy.run_path(str(ROOT / "tests" / "attack_cases.py"))["CASES"]
 CASES += runpy.run_path(str(ROOT / "tests" / "theme_cases.py"))["CASES"]
 CASES += runpy.run_path(str(ROOT / "tests" / "learning_cases.py"))["CASES"]
+CASES += runpy.run_path(str(ROOT / "tests" / "workshop_cases.py"))["CASES"]
+CASES += runpy.run_path(str(ROOT / "tests" / "advisor_cases.py"))["CASES"]
+CASES += runpy.run_path(str(ROOT / "tests" / "bag_cases.py"))["CASES"]
+CASES += runpy.run_path(str(ROOT / "tests" / "automatic_cases.py"))["CASES"]
+CASES += runpy.run_path(str(ROOT / "tests" / "layout_cases.py"))["CASES"]
 passed = 0
 failed = []
 for title, code in CASES:
