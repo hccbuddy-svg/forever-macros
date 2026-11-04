@@ -159,7 +159,7 @@ cast("WARLOCK", "warlock_banish", "Banish", "Banish a hostile mouseover, target,
     spell(710, "Banish"), hostile)
 cast("WARLOCK", "warlock_corruption", "Corruption", "Corruption on a hostile mouseover, target, or Shift-focus.",
     spell(172, "Corruption"), hostile)
-cast("WARLOCK", "warlock_agony", "Agony", "Curse of Agony on a hostile mouseover, target, or Shift-focus.",
-    spell(980, "Curse of Agony"), hostile)
+cast("WARLOCK", "warlock_agony", "Agony", "Bane of Agony on a hostile mouseover, target, or Shift-focus.",
+    { id = 980, english = "Bane of Agony", aliases = { "Curse of Agony" } }, hostile)
 cast("WARLOCK", "warlock_funnel", "HealthFunnel", "Health Funnel to your living pet.",
     spell(755, "Health Funnel"), "[@pet,exists,nodead]")

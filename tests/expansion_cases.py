@@ -242,7 +242,7 @@ case("UI equipment flow captures and saves a macro without equipping", GEAR + ''
 TEST.command(""); TEST.clickText("Equipment"); TEST.clickText("Capture equipped items")
 TEST.clickText("Save preset macro"); assert(TEST.named("FM Weapons A"))
 assert(TEST.inventory[16]==101 and TEST.inventory[17]==102)
-TEST.clickText("Boss reminders"); TEST.clickText("Help"); assert(FM.UI.panels.Help:IsShown())
+TEST.clickText("Reminders"); TEST.clickText("Help"); assert(FM.UI.panels.Help:IsShown())
 ''')
 
 ALERTS = '''

@@ -1,7 +1,7 @@
 [
   [
     "first login creates only applicable learned macros",
-    "TEST.learn(75, \"Auto Shot\"); TEST.learn(1130, \"Hunter's Mark\"); TEST.login()\nassert(TEST.named(\"FM AutoShot\") and TEST.named(\"FM MarkPet\"))\nassert(not TEST.named(\"FM MendPet\") and not TEST.named(\"FM Heal\"))\nassert(TEST.writes == 8)"
+    "TEST.learn(75, \"Auto Shot\"); TEST.learn(1130, \"Hunter's Mark\"); TEST.login()\nassert(TEST.named(\"FM AutoShot\") and TEST.named(\"FM MarkPet\") and TEST.named(\"FM Easy\"))\nassert(not TEST.named(\"FM MendPet\") and not TEST.named(\"FM Heal\"))\nassert(TEST.writes == 9)"
   ],
   [
     "repeated login and macro events are idempotent",
@@ -145,7 +145,7 @@
   ],
   [
     "each Classic class has a bounded valid unique collection",
-    "for _, class in ipairs({\"HUNTER\",\"WARRIOR\",\"ROGUE\",\"MAGE\",\"PRIEST\",\"DRUID\",\"PALADIN\",\"SHAMAN\",\"WARLOCK\"}) do\nlocal names, ids, count, starterCount = {}, {}, 0, 0\nfor _, definition in ipairs(FM.Catalog) do\n if definition.class == \"ALL\" or definition.class == class then\n  assert(not names[definition.name] and not ids[definition.id])\n  names[definition.name] = true; ids[definition.id] = true; count = count + 1; if not definition.optional then starterCount = starterCount + 1 end\n  local body = assert(FM.Core.Render(definition, function(req) return req.english end))\n  assert(#body <= 255 and #definition.name <= 16)\n  assert(not body:find(\"/run\", 1, true) and not body:find(\"/script\", 1, true))\n end\nend\nassert(count >= 8 and starterCount >= 8 and starterCount <= 28)\nend"
+    "for _, class in ipairs({\"HUNTER\",\"WARRIOR\",\"ROGUE\",\"MAGE\",\"PRIEST\",\"DRUID\",\"PALADIN\",\"SHAMAN\",\"WARLOCK\"}) do\nlocal names, ids, count, starterCount = {}, {}, 0, 0\nfor _, definition in ipairs(FM.Catalog) do\n if definition.class == \"ALL\" or definition.class == class then\n  assert(not names[definition.name] and not ids[definition.id])\n  names[definition.name] = true; ids[definition.id] = true; count = count + 1; if not definition.optional then starterCount = starterCount + 1 end\n  local body = assert(FM.Core.Render(definition, function(req) return req.english end))\n  assert(#body <= 255 and #definition.name <= 16)\n  assert(not body:find(\"/run\", 1, true) and not body:find(\"/script\", 1, true))\n end\nend\nassert(count >= 8 and starterCount >= 8 and starterCount <= 31)\nend"
   ],
   [
     "oversized localized names do not create truncated macros",

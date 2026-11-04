@@ -172,14 +172,15 @@ function U.Build()
         f:SetScale(math.min(1, (UIParent:GetWidth() - 20) / 1000, (UIParent:GetHeight() - 20) / 724))
     end
     button(f, "Close", 910, 28, 66, function() f:Hide() end)
+    button(f, "Move windows", 730, 28, 168, function() f:Hide();FM.Layout.Move() end)
     U.status = text(f, 24, 686, 850, 28, 12)
     text(f, 902, 690, 76, 18, 11):SetText("v" .. FM.Version)
     U.artStatus = text(f, 730, 68, 245, 23, 11)
     button(f, "Update installed macros", 700, 120, 280, function() notice(M.UpdateInstalled()) end)
     U.panels, U.tabs, U.filters = {}, {}, {}
-    for i, name in ipairs({"Macros", "Equipment", "Boss reminders", "Help"}) do
+    for i, name in ipairs({"Macros", "Sequences", "Builds", "Coach", "Training", "Equipment", "Boss reminders", "Help"}) do
         local tab = name
-        U.tabs[name] = button(f, name, 20 + (i - 1) * 165, 120, 155, function() U.tab = tab; U.Refresh() end)
+        U.tabs[name] = button(f, name == "Boss reminders" and "Reminders" or name, 20 + (i - 1) * 84, 120, 80, function() U.tab = tab; U.Refresh() end)
         local panel = CreateFrame("Frame", nil, f)
         panel:SetPoint("TOPLEFT", f, "TOPLEFT", 0, -164); panel:SetSize(1000, 500)
         fill(panel, 14, -7, 972, 514, 1, 0.98, 0.91, 0.62)
@@ -324,6 +325,9 @@ function U.Build()
     p = U.panels.Help
     text(p, 25, 5, 945, 460, 14):SetText("MACROS\nSearch for an action and install it. Core attacks appear when learned and space is free. Choosing an unlearned optional action saves it for later. + installed, ~ saved, * unavailable. Drag the macro to your bar once; assignment changes update the same macro.\n\nTEAMMATES\nPin a person, or follow a party/raid slot. Clicking a name requests the change. During combat, the old assignment stays active until the queued change is applied. Reloading clears unsaved pending requests. Manual edits are preserved.\n\nEQUIPMENT\nNo item names need typing. Capture equipment or select items from your bags. Weapon macros equip the saved items when you press them. Trinket equipping and full equipment sets are blocked in combat. Use TrinketTop or TrinketBottom from the macro library to activate an equipped trinket.\n\nREMINDERS\nBoss reminders are optional and off by default. Test displays are demonstrations. Live reminders require a readable DBM timer that you link to a macro. They do not cast or change your action buttons.\n\nCOMMANDS\n/fm opens this window. /fm status shows version and slots. /fm off pauses additions. /fm on enables them. /fm reserve NUMBER keeps slots free. /fm retry clears an API fault. See README.md for restoration and live-test steps.")
     UISpecialFrames = UISpecialFrames or {}; table.insert(UISpecialFrames, "ForeverMacrosWindow")
+    FM.WorkshopUI.Build({text=text,button=button,edit=edit,choose=choose})
+    FM.CoachUI.Build({text=text,button=button,edit=edit,choose=choose})
+    FM.TrainingUI.Build({text=text,button=button,edit=edit,choose=choose})
     f:Hide()
 end
 
@@ -332,6 +336,7 @@ function U.Refresh()
     local db = FM.API.State()
     if not db then return end
     U.ApplyTheme()
+    if U.tab ~= "Training" then FM.TrainingUI.Detach() end
     for name, b in pairs(U.tabs) do choose(b, name == U.tab) end
     for name, b in pairs(U.filters) do choose(b, name == U.filter) end
     for name, panel in pairs(U.panels) do if name == U.tab then panel:Show() else panel:Hide() end end
@@ -381,6 +386,12 @@ function U.Refresh()
                 if d and d.unitBody then b:Enable() else b:Disable() end
             else b:Hide() end
         end
+    elseif U.tab == "Training" then
+        FM.TrainingUI.Refresh()
+    elseif U.tab == "Coach" then
+        FM.CoachUI.Refresh()
+    elseif U.tab == "Sequences" or U.tab == "Builds" then
+        FM.WorkshopUI.Refresh()
     elseif U.tab == "Equipment" then
         local preset = G.presets[U.gearIndex]
         U.gearTitle:SetText(preset.label)

@@ -138,6 +138,7 @@ local function reportError(message)
 end
 
 local function plan()
+    if FM.AutoSequences then FM.AutoSequences.Refresh() end
     local state, reason = snapshot()
     if not state then return nil, reason end
     local _, class = UnitClass("player")
@@ -215,6 +216,33 @@ local function command(text)
     verb = verb:lower()
     if verb == "" or verb == "ui" then
         if FM.UI then FM.UI.Toggle() else say("The window is not available yet.") end
+    elseif verb == "bags" then
+        FM.Bags.Command(argument)
+    elseif verb == "layout" then
+        FM.Layout.Command(argument)
+    elseif verb == "move" then
+        FM.Layout.Move()
+    elseif verb == "training" then
+        FM.UI.tab = "Training"
+        if FM.UI.frame and FM.UI.frame:IsShown() then FM.UI.Refresh() else FM.UI.Toggle() end
+    elseif verb == "easy" or verb == "totems" then
+        FM.UI.tab = "Macros"
+        FM.UI.filter = "Sequences"
+        FM.UI.page = 1
+        if not FM.UI.frame or not FM.UI.frame:IsShown() then FM.UI.Toggle() end
+        if FM.UI.search then FM.UI.search:SetText(verb == "easy" and "FM Easy" or "FM Totems") end
+        FM.UI.Refresh()
+    elseif verb == "coach" or verb == "talents" then
+        if argument == "status" then say(FM.Advisor.NativeStatus()); return end
+        if argument == "off" then FM.Advisor.Settings().hud=false; FM.CoachUI.RefreshHUD(); return end
+        FM.UI.tab = "Coach"
+        if FM.UI.frame and FM.UI.frame:IsShown() then FM.UI.Refresh() else FM.UI.Toggle() end
+    elseif verb == "sequences" or verb == "builds" then
+        FM.UI.tab = verb == "sequences" and "Sequences" or "Builds"
+        if FM.UI.frame and FM.UI.frame:IsShown() then FM.UI.Refresh() else FM.UI.Toggle() end
+    elseif verb == "check" then
+        local report, reason = FM.Workshop.Audit()
+        if report then for _, line in ipairs(report) do say(line) end else say(reason) end
     elseif verb == "update" then
         local ok, reason = FM.Manager.UpdateInstalled()
         if not ok then say(reason) end
@@ -282,7 +310,7 @@ SlashCmdList.FOREVERMACROS = command
 
 for _, event in ipairs({
     "ADDON_LOADED", "PLAYER_ENTERING_WORLD", "SPELLS_CHANGED",
-    "SPELL_TEXT_UPDATE", "PLAYER_REGEN_ENABLED", "UPDATE_MACROS", "UNIT_PET", "PLAYER_LEVEL_UP",
+    "SPELL_TEXT_UPDATE", "PLAYER_REGEN_ENABLED", "UPDATE_MACROS", "UNIT_PET", "PLAYER_LEVEL_UP", "TRAIT_CONFIG_UPDATED",
 }) do frame:RegisterEvent(event) end
 
 frame:SetScript("OnEvent", function(_, event, arg1)
@@ -291,13 +319,15 @@ frame:SetScript("OnEvent", function(_, event, arg1)
         db, reason = Core.NewState(ForeverMacrosDB)
         if not db then reportError(reason); return end
         ForeverMacrosDB = db
+        if FM.Workshop then FM.Workshop.Initialize() end
+        if FM.Layout then FM.Layout.Prepare() end
     elseif event == "PLAYER_ENTERING_WORLD" then
         ready = true
         schedule()
     elseif event == "PLAYER_REGEN_ENABLED" then
         if pendingCombat then pendingCombat = false; schedule() end
     elseif event == "SPELLS_CHANGED" or event == "SPELL_TEXT_UPDATE" or event == "UPDATE_MACROS"
-        or event == "PLAYER_LEVEL_UP" or (event == "UNIT_PET" and arg1 == "player") then
+        or event == "PLAYER_LEVEL_UP" or event == "TRAIT_CONFIG_UPDATED" or (event == "UNIT_PET" and arg1 == "player") then
         schedule()
     end
 end)

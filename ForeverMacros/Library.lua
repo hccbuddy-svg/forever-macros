@@ -1,5 +1,5 @@
 local _, FM = ...
-FM.Version = "0.4.1"
+FM.Version = "0.11.0"
 local byID = {}
 for _, d in ipairs(FM.Catalog) do byID[d.id] = d end
 local enemy = "[mod:shift,@focus,harm,nodead][@mouseover,harm,nodead][harm,nodead]"
@@ -151,6 +151,10 @@ for _, s in ipairs({{"battle","BattleShout",6673,"Battle Shout"},{"demo","DemoSh
     {"piercing","PierceHowl",12323,"Piercing Howl"}}) do cast("WARRIOR", s[1],s[2],s[3],s[4],"") end
 for _, s in ipairs({{"rupture","Rupture",1943,"Rupture"},{"riposte","Riposte",14251,"Riposte"},
     {"expose","ExposeArmor",8647,"Expose Armor"},{"slice","SliceDice",5171,"Slice and Dice"}}) do melee("ROGUE", unpack(s)) end
+-- Forever talent IDs from the attributed October 8 tree snapshot, not Retail IDs.
+melee("ROGUE","mutilate","Mutilate",1310707,"Mutilate")
+melee("ROGUE","venom","Venom",1310703,"Venom")
+melee("ROGUE","ghostly","GhostlyStrike",14278,"Ghostly Strike")
 for _, s in ipairs({{"ambush","Ambush",8676,"Ambush"},{"garrote","Garrote",703,"Garrote"},
     {"pickpocket","PickPocket",921,"Pick Pocket"}}) do
     cast("ROGUE",s[1],s[2],s[3],s[4],"[stealth,harm,nodead]", {category = "Attacks", description = "Stealthed current enemy only. No auto attack before the opener."})
@@ -172,7 +176,7 @@ end
 melee("DRUID","swipe","Swipe",779,"Swipe",{5487,9634})
 melee("DRUID","primalbite","PrimalBite",nil,"Primal Bite",{5487,9634})
 cast("DRUID", "shiftingpower", "ShiftingPower", nil, "Shifting Power", "[form:{form}]", {
-    forms = {768}, description = "Use Shifting Power while already in Cat Form. Spends mana for energy. Does not shift forms or start attacks."})
+    forms = {768}, description = "Use Shifting Power while already in Cat Form. Spends mana for energy. The game rejects it at full energy. Does not shift forms or start attacks."})
 for _, s in ipairs({{"wrath","Wrath",5176,"Wrath"},{"starfire","Starfire",2912,"Starfire"},{"moonfire","Moonfire",8921,"Moonfire"}}) do
     cast("DRUID",s[1],s[2],s[3],s[4],"enemy",{category="Attacks"})
 end
@@ -180,8 +184,12 @@ for _, s in ipairs({{"mark","MarkWild",1126,"Mark of the Wild"},{"thorns","Thorn
     cast("DRUID",s[1],s[2],s[3],s[4],"friend")
 end
 cast("DRUID","regrowth_shift","ShiftRegrow",8936,"Regrowth","friend",{prefix="/cancelform\n",description="Leave animal form, then heal a friendly mouseover, target, or self. Costs the form and heal mana when shifting back."})
-cast("DRUID","prowl","Prowl",5215,"Prowl","",{prefix="/stopattack\n"})
-cast("DRUID","dash","Dash",1850,"Dash","")
+add("DRUID","druid_prowl","Prowl",{spell(5215,"Prowl")},
+    "#showtooltip {1}\n/stopattack\n/cast [form:{form},nocombat,nostealth] !{1}",
+    "Stop attacking and enter Prowl only while already in Cat Form outside combat. Repeated presses leave Prowl active. Does not shift forms.",
+    "Stop attacks; enter stealth in Cat Form",{forms={768}})
+cast("DRUID","dash","Dash",1850,"Dash","[form:{form}]",{forms={768},
+    description="Use Dash while already in Cat Form. Does not shift forms, cancel Prowl, or start attacks."})
 cast("DRUID","growl","Growl",6795,"Growl","enemy")
 cast("DRUID","feralcharge","FeralCharge",16979,"Feral Charge","enemy")
 cast("DRUID","tranquility","Tranquility",740,"Tranquility","[nochanneling]")
@@ -193,9 +201,20 @@ cast("PALADIN","exorcism","Exorcism",879,"Exorcism","enemy",{category="Attacks"}
 cast("PALADIN","wrath","HammerWrath",24275,"Hammer of Wrath","enemy",{category="Attacks"})
 cast("PALADIN","holyshock","HolyShock",20473,"Holy Shock","friend")
 cast("PALADIN","holyshock_enemy","ShockEnemy",20473,"Holy Shock","enemy",{category="Attacks"})
+for _, id in ipairs({"paladin_exorcism","paladin_wrath","paladin_holyshock_enemy","warrior_taunt"}) do
+    local d=byID[id]
+    d.body=d.body .. "\n/stopmacro " .. offTarget .. "\n/startattack [harm,nodead]"
+    d.description="Shift-focus, then hostile mouseover, then target. Only the target branch starts melee swings, including when the spell cannot cast."
+    d.attackPolicy="Melee on target branch only"
+    d.optional=false; d.category="Attacks"; d.priority=5
+end
+byID.paladin_consecration.body=byID.paladin_consecration.body .. "\n/startattack [harm,nodead]"
+byID.paladin_consecration.description="Attempt Consecration at your feet. Also start melee swings at a living selected enemy, even if the spell cannot cast."
+byID.paladin_consecration.attackPolicy="Melee on current enemy"
+byID.paladin_consecration.optional=false; byID.paladin_consecration.priority=5
 for _, s in ipairs({{"might","Might",19740,"Blessing of Might"},{"wisdom","Wisdom",19742,"Blessing of Wisdom"},
-    {"kings","Kings",20217,"Blessing of Kings"},{"salvation","Salvation",1038,"Blessing of Salvation"},
-    {"light","Light",19977,"Blessing of Light"},{"sanctuary","Sanctuary",20911,"Blessing of Sanctuary"}}) do
+    {"kings","Kings",20217,"Blessing of Kings"}}) do
+    -- Blessing of Light, Salvation and Sanctuary are no longer taught since the 30 Oct Paladin rebuild.
     cast("PALADIN",s[1],s[2],s[3],s[4],"friend")
 end
 for _, s in ipairs({{"sealright","SealRight",21084,"Seal of Righteousness"},{"sealcommand","SealCommand",20375,"Seal of Command"},
@@ -210,20 +229,23 @@ for _, s in ipairs({{"bolt","LightnBolt",403,"Lightning Bolt"},{"chainlight","Ch
 end
 cast("SHAMAN","riptide","Riptide",nil,"Riptide","friend")
 cast("SHAMAN","farseer","FarSeer",nil,"Rage of the Far Seer","")
-cast("SHAMAN","mastery","ElemMastery",16166,"Elemental Mastery","")
+-- Forever renamed Elemental Mastery (16166) to Lightning Mastery; the macro keeps its name.
+cast("SHAMAN","mastery","ElemMastery",16166,"Lightning Mastery","").spells[1].aliases = {"Elemental Mastery"}
 cast("SHAMAN","swiftness","NatSwift",16188,"Nature's Swiftness","")
 for _, s in ipairs({{"searing","Searing",3599,"Searing Totem"},{"magma","Magma",8190,"Magma Totem"},
-    {"firenova","FireNova",1535,"Fire Nova Totem"},{"manaspring","ManaSpring",5675,"Mana Spring Totem"},
+    {"firenova","FireNova",1535,"Fire Nova"},{"manaspring","ManaSpring",5675,"Mana Spring Totem"},
     {"manatide","ManaTide",16190,"Mana Tide Totem"},{"healingstream","HealStream",5394,"Healing Stream Totem"},
     {"windfury","Windfury",8512,"Windfury Totem"},{"graceair","GraceAir",8835,"Grace of Air Totem"},
     {"strength","Strength",8075,"Strength of Earth Totem"},{"stoneclaw","Stoneclaw",5730,"Stoneclaw Totem"},
     {"poisonclean","PoisonClean",8166,"Poison Cleansing Totem"},{"diseaseclean","DiseaseClean",8170,"Disease Cleansing Totem"}}) do
     cast("SHAMAN",s[1],s[2],s[3],s[4],"")
 end
+-- Fire Nova is a spell in Forever, no longer a totem.
+byID.shaman_firenova.spells[1].aliases = {"Fire Nova Totem"}
 
 for _, class in ipairs({"MAGE", "PRIEST", "WARLOCK"}) do
     add(class,class:lower() .. "_wand","Wand",{spell(5019,"Shoot")},"#showtooltip {1}\n/cast [harm,nodead] !{1}",
-        "Start wand shooting at your current enemy without toggling it off. Use this separate button between spells.",
+        "Attempt wand shooting at your current enemy with !Shoot. Repeat-press behavior has an open Forever beta bug report; test it on your build. Use this separate button between spells.",
         "Ranged wand Shoot on current enemy",{auto=true,category="Attacks"})
 end
 for _, s in ipairs({{"fireball","Fireball",133,"Fireball"},{"scorch","Scorch",2948,"Scorch"}}) do
@@ -244,6 +266,10 @@ for _, s in ipairs({{"smite","Smite",585,"Smite"},{"holyfire","HolyFire",14914,"
     {"pain","ShadowPain",589,"Shadow Word: Pain"},{"mindblast","MindBlast",8092,"Mind Blast"},
     {"manaburn","ManaBurn",8129,"Mana Burn"}}) do cast("PRIEST",s[1],s[2],s[3],s[4],"enemy",{category="Attacks"}) end
 cast("PRIEST","flay","MindFlay",15407,"Mind Flay","[nochanneling,harm,nodead]",{category="Attacks"})
+cast("PRIEST","penance_heal","PenanceHeal",nil,"Penance","friend",{prefix="/stopmacro [channeling]\n",
+    description="Heal with Penance. Alt: self, then friendly mouseover, target, self. Supports teammate assignment. Waits for any current channel to finish."})
+cast("PRIEST","penance_harm","PenanceHarm",nil,"Penance","enemy",{prefix="/stopmacro [channeling]\n",category="Attacks",
+    description="Damage with Penance. Shift: hostile focus, then hostile mouseover, target. Waits for any current channel to finish. Does not start melee or wand attacks."})
 cast("PRIEST","greater","GreaterHeal",2060,"Greater Heal","friend")
 cast("PRIEST","fortitude","Fortitude",1243,"Power Word: Fortitude","friend")
 cast("PRIEST","spirit","DivineSpirit",14752,"Divine Spirit","friend")
@@ -256,7 +282,8 @@ for _, s in ipairs({{"shadowbolt","ShadowBolt",686,"Shadow Bolt"},{"immolate","I
     {"searingpain","SearingPain",5676,"Searing Pain"},{"soulfire","SoulFire",6353,"Soul Fire"},
     {"shadowburn","Shadowburn",17877,"Shadowburn"},{"conflagrate","Conflagrate",17962,"Conflagrate"},
     {"elements","Elements",1490,"Curse of the Elements"},{"recklessness","RecklessCurse",704,"Curse of Recklessness"},
-    {"weakness","Weakness",702,"Curse of Weakness"},{"doom","Doom",603,"Curse of Doom"}}) do cast("WARLOCK",s[1],s[2],s[3],s[4],"enemy",{category="Attacks"}) end
+    {"weakness","Weakness",702,"Curse of Weakness"},{"doom","Doom",603,"Bane of Doom"}}) do cast("WARLOCK",s[1],s[2],s[3],s[4],"enemy",{category="Attacks"}) end
+byID.warlock_doom.spells[1].aliases = {"Curse of Doom"}
 for _, s in ipairs({{"drainlife","DrainLife",689,"Drain Life"},{"drainsoul","DrainSoul",1120,"Drain Soul"},
     {"drainmana","DrainMana",5138,"Drain Mana"}}) do cast("WARLOCK",s[1],s[2],s[3],s[4],"[nochanneling,harm,nodead]",{category="Attacks"}) end
 cast("WARLOCK","rainfire","RainFire",5740,"Rain of Fire","[@cursor]",{category="Attacks"})
