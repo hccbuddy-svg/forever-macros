@@ -1,5 +1,5 @@
 local _, FM = ...
-FM.Version = "0.11.2"
+FM.Version = "0.11.3"
 local byID = {}
 for _, d in ipairs(FM.Catalog) do byID[d.id] = d end
 local enemy = "[mod:shift,@focus,harm,nodead][@mouseover,harm,nodead][harm,nodead]"
@@ -258,7 +258,18 @@ for _, s in ipairs({{"bolt","LightnBolt",403,"Lightning Bolt"},{"chainlight","Ch
     local d = melee("SHAMAN",s[1],s[2],s[3] or nil,s[4])
     d.description = d.description .. " Intended for melee weaving; casting can delay swings."
 end
-cast("SHAMAN","riptide","Riptide",nil,"Riptide","friend")
+-- Riptide is a core heal once talented, so it installs when learned like the other heals.
+cast("SHAMAN","riptide","Riptide",nil,"Riptide","friend",{auto=true})
+-- One press: Nature's Swiftness (off the global cooldown), then the heal as an instant.
+for _, s in ipairs({{"nswave","NSWave",331,"Healing Wave","Biggest single instant heal."},
+    {"nschain","NSChain",1064,"Chain Heal","Instant group heal; 25% stronger on a target with your Riptide."}}) do
+    local base = "#showtooltip {2}\n/stopcasting\n/cast {1}\n/cast "
+    add("SHAMAN","shaman_" .. s[1],s[2],{spell(16188,"Nature's Swiftness"),spell(s[3],s[4])},
+        base .. friend .. " {2}",
+        "Emergency: stops your cast, uses Nature's Swiftness, then " .. s[4] .. " instantly. " .. s[5]
+            .. " Alt: self. Otherwise friendly mouseover, target, then self. While Nature's Swiftness is on cooldown the heal casts at normal speed.",
+        nil,{unitBody = base .. "[@{unit},help,nodead] {2}"})
+end
 cast("SHAMAN","farseer","FarSeer",nil,"Rage of the Far Seer","")
 -- Forever renamed Elemental Mastery (16166) to Lightning Mastery; the macro keeps its name.
 cast("SHAMAN","mastery","ElemMastery",16166,"Lightning Mastery","").spells[1].aliases = {"Elemental Mastery"}

@@ -446,3 +446,28 @@ assert(not TEST.named("FM Prowl") and not TEST.named("FM Dash"))
 TEST.forms={5487,768}; TEST.fire("UPDATE_SHAPESHIFT_FORMS"); TEST.flush()
 assert(TEST.named("FM Prowl") and TEST.named("FM Dash"))
 ''')
+
+case("SHAMAN: Riptide installs with the friendly mouseover chain once learned", r'''
+TEST.class="SHAMAN"; TEST.login(); assert(not TEST.named("FM Riptide"))
+TEST.learn(408521,"Riptide"); TEST.fire("SPELLS_CHANGED"); TEST.flush()
+local m=assert(TEST.named("FM Riptide"))
+assert(m.body=="#showtooltip Riptide\n/cast [mod:alt,@player][@mouseover,help,nodead][help,nodead][@player] Riptide")
+''')
+
+case("SHAMAN: Nature's Swiftness heal buttons are optional and need both spells", r'''
+TEST.class="SHAMAN"; TEST.learn(1064,"Chain Heal"); TEST.learn(331,"Healing Wave"); TEST.login()
+assert(TEST.named("FM ChainHeal") and not TEST.named("FM NSChain") and not TEST.named("FM NSWave"))
+assert(FM.Manager.Request("shaman_nschain")); assert(not TEST.named("FM NSChain") and ForeverMacrosDB.wanted.shaman_nschain)
+TEST.learn(16188,"Nature's Swiftness"); TEST.fire("SPELLS_CHANGED"); TEST.flush()
+local m=assert(TEST.named("FM NSChain"))
+assert(m.body=="#showtooltip Chain Heal\n/stopcasting\n/cast Nature's Swiftness\n/cast [mod:alt,@player][@mouseover,help,nodead][help,nodead][@player] Chain Heal")
+assert(not TEST.named("FM NSWave")); assert(FM.Manager.Request("shaman_nswave"))
+local w=assert(TEST.named("FM NSWave")); assert(#w.body<=255 and w.body:find("/cast Nature's Swiftness\n/cast [mod:alt,@player]",1,true))
+''')
+
+case("SHAMAN: a Nature's Swiftness heal button can be pinned to a teammate", r'''
+TEST.class="SHAMAN"; TEST.learn(1064,"Chain Heal"); TEST.learn(16188,"Nature's Swiftness"); TEST.login()
+TEST.member("party1","Cupcake","Some Realm")
+assert(FM.Manager.Request("shaman_nschain",{kind="slot",unit="party1"})); TEST.flush()
+assert(TEST.named("FM NSChain").body=="#showtooltip Chain Heal\n/stopcasting\n/cast Nature's Swiftness\n/cast [@party1,help,nodead] Chain Heal")
+''')
