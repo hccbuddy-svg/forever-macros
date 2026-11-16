@@ -1,5 +1,5 @@
 local _, FM = ...
-FM.Version = "0.11.0"
+FM.Version = "0.11.2"
 local byID = {}
 for _, d in ipairs(FM.Catalog) do byID[d.id] = d end
 local enemy = "[mod:shift,@focus,harm,nodead][@mouseover,harm,nodead][harm,nodead]"
@@ -35,11 +35,13 @@ local function melee(class, suffix, label, id, name, forms)
             .. (forms and " Requires the matching form; protects Prowl." or class == "ROGUE" and " Protects Stealth on failed casts." or ""),
         forms and "Melee in matching form, outside stealth" or "Melee on current enemy", {auto = true, category = "Attacks", forms = forms})
 end
+-- Forever starts Auto Shot whenever a shot casts, so shot buttons carry no Auto Shot line
+-- (an extra Auto Shot cast on each press delays the next shot, forever-bugs #43).
 local function shot(suffix, label, id, name)
-    add("HUNTER", "hunter_" .. suffix, label, {spell(id, name), spell(75, "Auto Shot")},
-        "#showtooltip {1}\n/cast [harm,nodead] !{2}\n/cast [harm,nodead] {1}",
-        "Current enemy only. Starts Auto Shot without toggling it off. Does not send your pet.",
-        "Ranged Auto Shot on current enemy", {auto = true, category = "Attacks"})
+    add("HUNTER", "hunter_" .. suffix, label, {spell(id, name)},
+        "#showtooltip {1}\n/cast [harm,nodead] {1}",
+        "Current enemy only. The game starts Auto Shot when the shot casts. Does not send your pet.",
+        "Shot starts Auto Shot on current enemy", {auto = true, category = "Attacks"})
 end
 
 -- Existing primary damage buttons are now automatic, with priority over utility.
@@ -49,13 +51,12 @@ for _, d in ipairs(FM.Catalog) do
     elseif d.class == "ALL" then d.priority = 50 end
 end
 
--- Preserve off-target utility without starting shots into a different selected enemy.
+-- Off-target utility (Concussive, Viper, Tranquilizing) adds no Auto Shot line. Note that the
+-- game itself may start Auto Shot on whichever enemy the shot hit.
 for _, id in ipairs({"hunter_concussive", "hunter_viper", "hunter_tranq"}) do
     local d = byID[id]
-    d.spells[2] = spell(75, "Auto Shot")
-    d.body = d.body .. "\n/stopmacro " .. offTarget .. "\n/cast [harm,nodead] !{2}"
-    d.description = "Shift-focus, then hostile mouseover, then target. Only the target branch starts Auto Shot."
-    d.attackPolicy = "Ranged Auto Shot on target branch only"
+    d.description = "Shift-focus, then hostile mouseover, then target. The game may start Auto Shot on the enemy you hit."
+    d.attackPolicy = "No attack-start command"
 end
 byID.hunter_raptor.body = byID.hunter_raptor.body:gsub("%] {1}", "] !{1}")
 shot("aimed", "AimedShot", 19434, "Aimed Shot")
@@ -81,7 +82,37 @@ add("HUNTER", "hunter_melee", "MeleeWeave", {spell(2973, "Raptor Strike"), spell
     "Stop your cast and attempt Raptor Strike and Mongoose Bite. Cooldowns and the global cooldown still apply.", "Melee on current enemy", {category = "Attacks"})
 add("HUNTER", "hunter_markshot", "MarkShot", {spell(1130, "Hunter's Mark"), spell(75, "Auto Shot")},
     "#showtooltip {1}\n/cast [harm,nodead] !{2}\n/cast [harm,nodead] {1}\n/petattack [harm,nodead]",
-    "Mark your current enemy, start Auto Shot, and send your pet.", "Ranged Auto Shot and pet on current enemy", {category = "Attacks"})
+    "Pull button, press once: mark your current enemy, start Auto Shot, and send your pet.", "Ranged Auto Shot and pet on current enemy", {category = "Attacks"})
+
+-- Hunter melee carries no /startattack. A Hunter's melee swing and Auto Shot share one
+-- auto-repeat slot: /startattack pressed at range swaps a running Auto Shot for a melee swing
+-- that cannot reach, and the Hunter stops shooting. The strike itself starts the swing when it
+-- casts in melee range, and fails harmlessly at range, so Auto Shot keeps running. (Zikorik's
+-- Forever Aimed Shot opener, 2026-10-31, casts Raptor Strike the same way.) Wing Clip's
+-- off-target stop line guarded only that start, so it goes too. The buttons stay automatic.
+for _, id in ipairs({"hunter_raptor", "hunter_wingclip", "hunter_mongoose", "hunter_strider",
+    "hunter_counterattack", "hunter_melee"}) do
+    local d = assert(byID[id], id)
+    d.body = d.body:gsub("\n/startattack %b[]", ""):gsub("\n/stopmacro [^\n]*$", "")
+    d.attackPolicy = "Strike starts melee in range; never replaces Auto Shot"
+end
+byID.hunter_raptor.description = "Attempt Raptor Strike on your target. It starts your melee swing when it lands in range; a press at range leaves Auto Shot running."
+byID.hunter_wingclip.description = "Shift: focus. Otherwise hostile mouseover, then target. Starts melee only when it lands in range; never stops Auto Shot."
+byID.hunter_mongoose.description = "Attempt Mongoose Bite on your target after a dodge. Starts melee only when it casts in range; never stops Auto Shot."
+byID.hunter_strider.description = "Attempt Strider Kick on your target. Starts melee only when it casts in range; never stops Auto Shot."
+byID.hunter_counterattack.description = "Attempt Counterattack on your target after a parry. Starts melee only when it casts in range; never stops Auto Shot."
+byID.hunter_melee.description = "Stop your cast and attempt Raptor Strike and Mongoose Bite. The strikes start melee in range; a press at range leaves Auto Shot running."
+
+-- Zikorik's WoW Forever Auto Shot guide (2026-10-31, youtu.be/4OgI99NbzQU), as shown on screen.
+-- Optional: both acquire a target on their own, which can pull a nearby enemy you did not pick.
+add("HUNTER", "hunter_shottarget", "ShotTarget", {spell(75, "Auto Shot")},
+    "#showtooltip {1}\n/cleartarget [dead][help]\n/targetenemy [noexists]\n/cast [@mouseover,harm,exists,nodead] !{1}; !{1}\n/petattack [@mouseover,harm,exists,nodead][harm,nodead]",
+    "Auto Shot that drops a dead or friendly target and picks the nearest enemy when you have none. Hostile mouseover first. Sends your pet to the same enemy.",
+    "Ranged Auto Shot and pet; picks an enemy when none is selected", {category = "Attacks"})
+add("HUNTER", "hunter_aimopen", "AimOpen", {spell(2973, "Raptor Strike"), spell(19434, "Aimed Shot"), spell(75, "Auto Shot")},
+    "#showtooltip {2}\n/cleartarget [dead][help]\n/targetenemy [noexists]\n/cast {1}\n/cast {2}\n/cast !{3}\n/petattack",
+    "Opener: picks an enemy when none is selected, Raptor Strike in melee or Aimed Shot at range, then Auto Shot and your pet. Press once per pull.",
+    "Strike or shot, Auto Shot and pet; picks an enemy when none is selected", {category = "Attacks"})
 for _, s in ipairs({{"hawk","Hawk",13165,"Aspect of the Hawk"},{"monkey","Monkey",13163,"Aspect of the Monkey"},
     {"cheetah","Cheetah",5118,"Aspect of the Cheetah"},{"pack","Pack",13159,"Aspect of the Pack"},
     {"wild","Wild",20043,"Aspect of the Wild"},{"beast","Beast",13161,"Aspect of the Beast"},
@@ -302,4 +333,22 @@ for _, s in ipairs({{"MAGE","cancelblock","CancelBlock",45438,"Ice Block"},
         add(s[1],s[1]:lower() .. "_" .. s[2],s[3],{spell(s[4],s[5])},"#showtooltip {1}\n/cancelaura {1}",
             "Cancel your " .. s[5] .. " aura. This button does not cast it.",nil,{pvp=true})
     end
+end
+
+-- Ground-targeted spells cast at the mouse pointer: no targeting circle and no second click.
+-- These are every placed ability the Forever classes have (Blizzard and Flamestrike, Rain of
+-- Fire, Hurricane, Volley and Flare, Distract); traps still drop at your feet. Each installs
+-- automatically once learned. FM.GROUND lists them so tests can hold every template to it.
+cast("DRUID","hurricane","Hurricane",16914,"Hurricane","[@cursor]",{category="Attacks"})
+FM.GROUND = {mage_blizzard = "Blizzard", mage_flamestrike = "Flamestrike", warlock_rainfire = "Rain of Fire",
+    druid_hurricane = "Hurricane", hunter_volley = "Volley", hunter_flare = "Flare", rogue_distract = "Distract"}
+for id, name in pairs(FM.GROUND) do
+    local d = assert(byID[id], id)
+    assert(d.spells and d.spells[1] and d.spells[1].english == name, id)
+    d.body = "#showtooltip {1}\n/cast [@cursor] {1}"
+    d.description = "Drops " .. name .. " at your mouse pointer the moment you press it: no targeting circle, no extra click. Point at the ground first."
+    -- Hunters already fill their character macro slots with automatic buttons, so Flare stays a
+    -- /fm choice (still a cursor cast); every other placed spell installs once learned.
+    d.optional = id == "hunter_flare"; d.priority = d.optional and 20 or 5
+    d.category = (id == "hunter_flare" or id == "rogue_distract") and "Utility" or "Attacks"
 end

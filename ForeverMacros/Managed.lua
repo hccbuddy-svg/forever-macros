@@ -4,6 +4,39 @@ FM.Managed = M
 local function normal(s) return (s or ""):gsub("\r\n", "\n"):gsub("%s+$", "") end
 function M.SameBody(a, b) return normal(a) == normal(b) end
 
+-- The game can put back the text the add-on itself wrote before an update: add-on data saves on
+-- every /reload, macros only at a normal logout, so a client that closes without one keeps the
+-- new record and the old macro (Forever, 2026-11-07). Text equal to the pre-update backup is the
+-- add-on's own, not a personal edit, so it may still be updated. Anything else stays preserved.
+-- Exact lines Hunter templates lost in 0.11.1 (Auto Shot recast) and 0.11.2 (melee start and
+-- Wing Clip's off-target stop). Texts written before the add-on kept a history are recognized
+-- as its own when they equal the current record plus only these lines.
+local HUNTER_LEGACY = {
+    ["/cast [harm,nodead] !Auto Shot"] = true, ["/cast !Auto Shot"] = true,
+    ["/startattack [harm,nodead]"] = true,
+    ["/stopmacro [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead]"] = true,
+}
+local function withoutHunterLegacy(body)
+    local out = {}
+    for line in (normal(body) .. "\n"):gmatch("([^\n]*)\n") do
+        if not HUNTER_LEGACY[line] then out[#out + 1] = line end
+    end
+    return table.concat(out, "\n")
+end
+M.PRIOR_LIMIT = 6
+function M.Reverted(db, id, body)
+    local backup = db and db.editBackup and db.editBackup[id]
+    if backup ~= nil and type(backup.body) == "string" and normal(backup.body) == normal(body) then return true end
+    local record = db and db.managed and db.managed[id]
+    if type(record) ~= "table" or type(record.body) ~= "string" then return false end
+    for _, old in ipairs(type(record.prior) == "table" and record.prior or {}) do
+        if type(old) == "string" and normal(old) == normal(body) then return true end
+    end
+    local d = FM.Core and FM.Core.FindDefinition and FM.Core.FindDefinition(id)
+    return d ~= nil and d.class == "HUNTER" and normal(body) ~= normal(record.body)
+        and withoutHunterLegacy(body) == normal(record.body)
+end
+
 function M.ValidUnit(unit)
     return type(unit) == "string" and #unit > 0 and #unit < 110
         and not unit:find("[%s%c%[%];,@/\\|{}]")
@@ -43,7 +76,10 @@ function M.Write(db, definition, body, env)
             return nil, "Managed macro is missing, renamed, or ambiguous. Restore it explicitly before replacing it."
         end
         if normal(found.body) ~= normal(record.body) then
-            return nil, "Your edit was preserved. This macro will not be overwritten."
+            if not M.Reverted(db, definition.id, found.body) then
+                return nil, "Your edit was preserved. This macro will not be overwritten."
+            end
+            record.body = found.body
         end
         if normal(body) == normal(found.body) then return true end
         if type(env.edit) ~= "function" then return nil, "The client does not expose macro editing." end
@@ -58,6 +94,10 @@ function M.Write(db, definition, body, env)
             or index <= snapshot.accountLimit or index > snapshot.accountLimit + snapshot.limit then
             return nil, "The macro update could not be verified. Further updates are paused.", true
         end
+        -- Remember the text this replaces, so a later revert by the game is still recognized.
+        if type(record.prior) ~= "table" then record.prior = {} end
+        table.insert(record.prior, 1, record.body)
+        while #record.prior > M.PRIOR_LIMIT do table.remove(record.prior) end
         record.body = actualBody
         return true
     end
