@@ -471,3 +471,10 @@ TEST.member("party1","Cupcake","Some Realm")
 assert(FM.Manager.Request("shaman_nschain",{kind="slot",unit="party1"})); TEST.flush()
 assert(TEST.named("FM NSChain").body=="#showtooltip Chain Heal\n/stopcasting\n/cast Nature's Swiftness\n/cast [@party1,help,nodead] Chain Heal")
 ''')
+
+case("the add-on keeps its own short command when another add-on takes /fm", r'''
+local seen = {}
+for i = 1, 5 do local s = _G["SLASH_FOREVERMACROS" .. i]; if s then seen[s] = true end end
+assert(seen["/fm"] and seen["/forevermacros"] and seen["/fmac"])
+TEST.login(); TEST.command("status")
+''')

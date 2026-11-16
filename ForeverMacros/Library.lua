@@ -1,5 +1,5 @@
 local _, FM = ...
-FM.Version = "0.11.3"
+FM.Version = "0.11.4"
 local byID = {}
 for _, d in ipairs(FM.Catalog) do byID[d.id] = d end
 local enemy = "[mod:shift,@focus,harm,nodead][@mouseover,harm,nodead][harm,nodead]"
