@@ -28,13 +28,17 @@ for cls, template, sid, spell_name in [
     ("DRUID","druid_rake",1822,"Rake"),
     ("SHAMAN","shaman_stormstrike",17364,"Stormstrike"),
 ]:
+    # Hunter strikes carry no /startattack since 0.11.2: it would swap a running Auto Shot for a
+    # melee swing. The strike starts the swing itself when it casts in range.
+    attack = (f"assert(not m.body:find('/startattack',1,true) and m.body:find('/cast [harm,nodead] {spell_name}',1,true))"
+              if cls == "HUNTER" else "assert(m.body:find('/startattack',1,true))")
     case(f"{cls}: {spell_name} automatically installs after training and preserves its slot", f'''
 TEST.class='{cls}';TEST.login()
 local d=FM.Core.FindDefinition('{template}');assert(not TEST.named(d.name))
 TEST.fire('PLAYER_LEVEL_UP');TEST.flush();assert(not TEST.named(d.name))
 TEST.learn({sid},'{spell_name}');TEST.combat=true;TEST.fire('SPELLS_CHANGED');TEST.flush();assert(not TEST.named(d.name))
 TEST.combat=false;TEST.fire('PLAYER_REGEN_ENABLED');TEST.flush()
-local m=assert(TEST.named(d.name));assert(m.body:find('/startattack',1,true))
+local m=assert(TEST.named(d.name));{attack}
 local writes=TEST.writes;m.icon=87654
 TEST.known[{sid}]=false;TEST.entries[{sid}]=nil;TEST.learn({sid}+9000000,'{spell_name}')
 TEST.fire('SPELLS_CHANGED');TEST.flush();assert(TEST.named(d.name)==m and TEST.writes==writes and m.icon==87654)
@@ -45,7 +49,7 @@ for event in ["SPELLS_CHANGED", "SPELL_TEXT_UPDATE", "PLAYER_LEVEL_UP", "PLAYER_
 TEST.login(); assert(not TEST.named("FM ArcaneShot"))
 TEST.learn(75,"Auto Shot"); TEST.learn(3044,"Arcane Shot")
 TEST.fire("{event}"); TEST.flush()
-assert(TEST.named("FM ArcaneShot").body:find("!Auto Shot",1,true))
+assert(TEST.named("FM ArcaneShot").body=="#showtooltip Arcane Shot\\n/cast [harm,nodead] Arcane Shot")
 local writes=TEST.writes
 TEST.fire("{event}"); TEST.flush(); assert(TEST.writes==writes)
 ''')
@@ -117,7 +121,8 @@ case("Forever abilities resolve learned names without borrowing retail IDs", '''
 TEST.class="HUNTER"; TEST.login()
 assert(not TEST.named("FM StriderKick"))
 TEST.learn(999001,"Strider Kick"); TEST.fire("SPELLS_CHANGED"); TEST.flush()
-assert(TEST.named("FM StriderKick").body:find("/startattack",1,true))
+local kick=TEST.named("FM StriderKick").body
+assert(kick:find("/cast [harm,nodead] Strider Kick",1,true) and not kick:find("/startattack",1,true))
 TEST.locale="deDE"
 assert(not FM.API.Resolve({english="Holy Strike"}))
 TEST.locale="enUS"; TEST.learn(999002,"Primal Bite",{isPassive=true})
@@ -160,19 +165,24 @@ end
 for _, id in ipairs({"hunter_aimed","hunter_multi","hunter_scorpid","hunter_distracting"}) do
  local d=FM.Core.FindDefinition(id)
  local body=assert(FM.Core.Render(d,function(s) return s.english end))
- assert(body:find("!Auto Shot",1,true) and not body:find("/startattack",1,true),id)
+ assert(not body:find("Auto Shot",1,true) and not body:find("/startattack",1,true),id)
+ assert(d.attackPolicy=="Shot starts Auto Shot on current enemy",id)
 end
 ''')
 
-case("Off-target Hunter slows and dispels never start Auto Shot on selected enemy", '''
+# Since 0.11.1 these add no Auto Shot line on any branch; the game may start it on the enemy hit.
+case("Off-target Hunter slows and dispels carry no Auto Shot line on any branch", '''
 local enemy={exists=true,harm=true,dead=false}
 for _, id in ipairs({"hunter_concussive","hunter_viper","hunter_tranq"}) do
- local body=assert(FM.Core.Render(FM.Core.FindDefinition(id),function(s) return s.english end))
- for _, state in ipairs({{target=enemy,mouseover=enemy},{target=enemy,focus=enemy,shift=true}}) do
-  assert(#TEST.actionsOf(TEST.macroModel(body,state),"cast")==1,id)
+ local d=FM.Core.FindDefinition(id)
+ local body=assert(FM.Core.Render(d,function(s) return s.english end))
+ assert(not body:find("Auto Shot",1,true) and not body:find("/stopmacro",1,true),id)
+ assert(d.attackPolicy=="No attack-start command",id)
+ for _, spec in ipairs({{{target=enemy,mouseover=enemy},"mouseover"},{{target=enemy,focus=enemy,shift=true},"focus"},
+  {{target=enemy},"target"}}) do
+  local casts=TEST.actionsOf(TEST.macroModel(body,spec[1]),"cast")
+  assert(#casts==1 and casts[1].unit==spec[2] and casts[1].value==d.spells[1].english,id)
  end
- local casts=TEST.actionsOf(TEST.macroModel(body,{target=enemy}),"cast")
- assert(#casts==2 and casts[2].value=="!Auto Shot",id)
 end
 ''')
 
@@ -445,4 +455,36 @@ end
 assert(not TEST.named("FM Prowl") and not TEST.named("FM Dash"))
 TEST.forms={5487,768}; TEST.fire("UPDATE_SHAPESHIFT_FORMS"); TEST.flush()
 assert(TEST.named("FM Prowl") and TEST.named("FM Dash"))
+''')
+
+case("SHAMAN: Riptide installs with the friendly mouseover chain once learned", r'''
+TEST.class="SHAMAN"; TEST.login(); assert(not TEST.named("FM Riptide"))
+TEST.learn(408521,"Riptide"); TEST.fire("SPELLS_CHANGED"); TEST.flush()
+local m=assert(TEST.named("FM Riptide"))
+assert(m.body=="#showtooltip Riptide\n/cast [mod:alt,@player][@mouseover,help,nodead][help,nodead][@player] Riptide")
+''')
+
+case("SHAMAN: Nature's Swiftness heal buttons are optional and need both spells", r'''
+TEST.class="SHAMAN"; TEST.learn(1064,"Chain Heal"); TEST.learn(331,"Healing Wave"); TEST.login()
+assert(TEST.named("FM ChainHeal") and not TEST.named("FM NSChain") and not TEST.named("FM NSWave"))
+assert(FM.Manager.Request("shaman_nschain")); assert(not TEST.named("FM NSChain") and ForeverMacrosDB.wanted.shaman_nschain)
+TEST.learn(16188,"Nature's Swiftness"); TEST.fire("SPELLS_CHANGED"); TEST.flush()
+local m=assert(TEST.named("FM NSChain"))
+assert(m.body=="#showtooltip Chain Heal\n/stopcasting\n/cast Nature's Swiftness\n/cast [mod:alt,@player][@mouseover,help,nodead][help,nodead][@player] Chain Heal")
+assert(not TEST.named("FM NSWave")); assert(FM.Manager.Request("shaman_nswave"))
+local w=assert(TEST.named("FM NSWave")); assert(#w.body<=255 and w.body:find("/cast Nature's Swiftness\n/cast [mod:alt,@player]",1,true))
+''')
+
+case("SHAMAN: a Nature's Swiftness heal button can be pinned to a teammate", r'''
+TEST.class="SHAMAN"; TEST.learn(1064,"Chain Heal"); TEST.learn(16188,"Nature's Swiftness"); TEST.login()
+TEST.member("party1","Cupcake","Some Realm")
+assert(FM.Manager.Request("shaman_nschain",{kind="slot",unit="party1"})); TEST.flush()
+assert(TEST.named("FM NSChain").body=="#showtooltip Chain Heal\n/stopcasting\n/cast Nature's Swiftness\n/cast [@party1,help,nodead] Chain Heal")
+''')
+
+case("the add-on keeps its own short command when another add-on takes /fm", r'''
+local seen = {}
+for i = 1, 5 do local s = _G["SLASH_FOREVERMACROS" .. i]; if s then seen[s] = true end end
+assert(seen["/fm"] and seen["/forevermacros"] and seen["/fmac"])
+TEST.login(); TEST.command("status")
 ''')

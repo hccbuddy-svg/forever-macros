@@ -306,6 +306,9 @@ end
 
 SLASH_FOREVERMACROS1 = "/fm"
 SLASH_FOREVERMACROS2 = "/forevermacros"
+-- Forever Move also registers /fm and loads later, so it takes that command when both are
+-- installed. /fmac is this add-on's own short command.
+SLASH_FOREVERMACROS3 = "/fmac"
 SlashCmdList.FOREVERMACROS = command
 
 for _, event in ipairs({

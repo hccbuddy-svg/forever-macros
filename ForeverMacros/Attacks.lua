@@ -68,17 +68,18 @@ melee("HUNTER", "hunter_mongoose", "Mongoose", 1495, "Mongoose Bite")
 for _, spec in ipairs({{"hunter_arcane", "ArcaneShot", 3044, "Arcane Shot"},
     {"hunter_serpent", "SerpentSting", 1978, "Serpent Sting"}}) do
     table.insert(FM.Catalog, {class = "HUNTER", id = spec[1], name = "FM " .. spec[2], optional = true,
-        category = "PvP", spells = {{id = spec[3], english = spec[4]}, {id = 75, english = "Auto Shot"}},
-        description = "Current enemy only. Starts ranged Auto Shot and attempts the shot. Does not send your pet.",
-        body = "#showtooltip {1}\n/cast [harm,nodead] !{2}\n/cast [harm,nodead] {1}",
-        attackPolicy = "Ranged Auto Shot on current enemy"})
+        category = "PvP", spells = {{id = spec[3], english = spec[4]}},
+        description = "Current enemy only. Attempts the shot; the game starts Auto Shot when it casts. Does not send your pet.",
+        body = "#showtooltip {1}\n/cast [harm,nodead] {1}",
+        attackPolicy = "Shot starts Auto Shot on current enemy"})
 end
 
 -- Publish the decision for every template in the catalog and UI.
 for _, d in ipairs(FM.Catalog) do
     if not d.attackPolicy then
         d.attackPolicy = d.body:find("/startattack", 1, true) and "Melee on current enemy"
-            or (d.id == "hunter_auto" or d.id == "hunter_sequence") and "Ranged Auto Shot and pet on current enemy"
+            or d.id == "hunter_auto" and "Ranged Auto Shot and pet on current enemy"
+            or d.id == "hunter_sequence" and "Pet attack; shots start Auto Shot on current enemy"
             or d.body:find("/stopattack", 1, true) and "Stop attacks"
             or d.body:find("/petattack", 1, true) and "Pet attack only"
             or "No attack-start command"

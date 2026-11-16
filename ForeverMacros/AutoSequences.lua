@@ -9,7 +9,7 @@ S.recipes = {
      prep={steps={one(6673,"Battle Shout")},note="Self preparation. Battle Shout needs rage."}},
  PALADIN={open={steps={one(21084,"Seal of Righteousness"),one(20271,"Judgement")},melee=true,required=spell(21084,"Seal of Righteousness"),note="Seal then judge on a living enemy. Forever Judgement does not consume the seal."},
      prep={steps={one(19740,"Blessing of Might"),one(465,"Devotion Aura")},note="Solo melee preparation. Other blessings or auras may suit your group better."}},
- HUNTER={open={steps={one(1978,"Serpent Sting"),one(3044,"Arcane Shot")},shot=true,note="Ranged opener. Auto Shot starts if learned; send your pet separately."},
+ HUNTER={open={steps={one(1978,"Serpent Sting"),one(3044,"Arcane Shot")},shot=true,note="Ranged opener. Each shot starts Auto Shot; send your pet separately."},
      prep={steps={one(13165,"Aspect of the Hawk")},note="Ranged preparation. Change aspect manually for travel or melee."}},
  ROGUE={open={steps={one(1752,"Sinister Strike"),one(5171,"Slice and Dice")},melee=true,nostealth=true,note="Begin outside stealth: build one combo point, then Slice and Dice. Open from stealth separately."},
      prep={steps={one(1784,"Stealth")},note="Enter stealth before a pull. This does not select a stealth opener."}},
@@ -94,15 +94,14 @@ local function compact(d, resolve)
             if strike then lines[#lines+1]="/cast "..strike end
             d.description="Righteousness once per target, melee, then Judgement and Holy Strike. Off-GCD Judgement preserves the seal. Buff with FM AutoPrep. Reset after manually changing your seal."
         elseif d.class=="HUNTER" then
+            -- No Auto Shot line: each shot starts it, and an extra cast per press delays it (forever-bugs #43).
             lines[#lines+1]="/petattack"
-            local shot=learned(75,"Auto Shot")
-            if shot then lines[#lines+1]="/cast !"..shot end
             append(cycle,learned(1978,"Serpent Sting"))
             local hawk=learned(nil,"Summon Hawk")
             local arcane=learned(3044,"Arcane Shot")
             for i=1,(hawk and 2 or 3) do append(cycle,hawk or arcane) end
             if hawk then append(cycle,arcane) end
-            d.description="Pet + Auto Shot. Cycle Sting and three Arcanes; with Summon Hawk, Sting, two Hawks, Arcane. Shared cooldowns pause casting. Aspect, Mend Pet and Aimed Shot stay separate."
+            d.description="Pet attack, then cycle Sting and three Arcanes; with Summon Hawk, Sting, two Hawks, Arcane. Each shot starts Auto Shot. Shared cooldowns pause casting. Aspect, Mend Pet and Aimed Shot stay separate."
         end
         if #cycle>0 then lines[#lines+1]="/castsequence "..guard.."reset=target/combat/alt "..table.concat(cycle,",") end
         if #cycle==0 and d.class~="PALADIN" and d.class~="HUNTER" then d.blocked="Learn a supported damage spell first." end
@@ -133,10 +132,7 @@ local function build(d, recipe, resolve)
     local lines={"#showtooltip", "/stopmacro [channeling]"}
     if d.kind=="prep" then lines[#lines+1]="/stopmacro [combat]" end
     if recipe.melee then lines[#lines+1]="/startattack ["..guard.."harm,nodead]" end
-    if recipe.shot and resolve(spell(75,"Auto Shot")) then
-        d.spells[#d.spells+1]=spell(75,"Auto Shot")
-        lines[#lines+1]="/cast [harm,nodead] !{"..#d.spells.."}"
-    end
+    -- recipe.shot adds no line: Forever starts Auto Shot whenever a shot casts (forever-bugs #43).
     -- The terminal null stops replaying damage-over-time effects on extra presses.
     names[#names+1]="null"
     lines[#lines+1]="/castsequence ["..guard..(d.kind=="prep" and "@player" or "harm,nodead").."] reset="
@@ -152,9 +148,9 @@ for _,class in ipairs(classes) do
             local d={id="auto_"..class:lower().."_"..kind,class=class,kind=kind,name="FM "..labels[kind],
                 priority=(kind=="easy" or kind=="totems" or kind=="recall") and 1 or 2,category="Sequences",autoSequence=true,sequenceNames=true,formIDs=recipe.forms,
                 optional=recipe.optional==true,attackPolicy=recipe.melee and "Melee on current enemy with form and stealth guards"
-                    or recipe.shot and "Ranged Auto Shot if learned; no pet command" or "No attack-start command"}
+                    or recipe.shot and "Shots start Auto Shot; no pet command" or "No attack-start command"}
             if kind=="easy" then
-                d.attackPolicy=class=="HUNTER" and "Pet attack and learned Auto Shot on current living enemy"
+                d.attackPolicy=class=="HUNTER" and "Pet attack; shots start Auto Shot on current living enemy"
                     or (class=="SHAMAN" or class=="PALADIN") and "Melee on current living enemy" or "No attack-start command"
             end
             build(d,recipe,function(s) return s.english end)
