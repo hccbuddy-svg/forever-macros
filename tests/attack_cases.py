@@ -9,7 +9,7 @@ local friendly={exists=true,harm=false,dead=false}
 local dead={exists=true,harm=true,dead=true}
 local function render(id) return assert(FM.Core.Render(FM.Core.FindDefinition(id),function(r) return r.english end)) end
 '''
-for ability in ["shaman_shock", "shaman_frostshock", "warrior_charge", "warrior_pummel", "warrior_intercept", "warrior_disarm", "warrior_hamstring", "warrior_shieldbash", "rogue_kick", "rogue_kidney", "hunter_wingclip", "paladin_hammer"]:
+for ability in ["shaman_shock", "shaman_frostshock", "warrior_charge", "warrior_pummel", "warrior_intercept", "warrior_disarm", "warrior_hamstring", "warrior_shieldbash", "rogue_kick", "rogue_kidney", "paladin_hammer", "paladin_exorcism", "paladin_wrath", "paladin_holyshock_enemy", "warrior_taunt"]:
     case(ability + ": target swings while focus and mouseover do not start swings", SETUP + f'''
 local body=render("{ability}")
 local actions=TEST.macroModel(body,{{target=enemy}})
@@ -28,14 +28,48 @@ local a=TEST.macroModel(body,{{target=enemy,mouseover=friendly,shift=true}})
 assert(#TEST.actionsOf(a,"startattack")==1 and TEST.actionsOf(a,"cast")[1].unit=="target")
 ''')
 
+# Hunter melee lost /startattack in 0.11.2: a Hunter's melee swing and Auto Shot share one
+# auto-repeat slot, so a start pressed at range would replace a running Auto Shot. Wing Clip's
+# off-target /stopmacro guarded only that start and went with it.
+case("hunter_wingclip: casts by focus, mouseover, target priority and never starts or stops attacks", SETUP + '''
+local body=render("hunter_wingclip")
+for _, command in ipairs({"/startattack","/stopmacro","/stopattack"}) do assert(not body:find(command,1,true),command) end
+for _, spec in ipairs({{{target=enemy},"target"},{{target=enemy,mouseover=enemy},"mouseover"},
+ {{target=enemy,focus=enemy,shift=true},"focus"},{{target=enemy,mouseover=enemy,focus=enemy,shift=true},"focus"},
+ {{target=enemy,mouseover=friendly,shift=true},"target"}}) do
+ local a=TEST.macroModel(body,spec[1])
+ assert(#a==1 and a[1].command=="cast" and a[1].unit==spec[2] and a[1].value=="Wing Clip",spec[2])
+end
+for _, target in ipairs({friendly,dead,{}}) do
+ assert(#TEST.macroModel(body,{target=target})==0)
+end
+assert(FM.Core.FindDefinition("hunter_wingclip").attackPolicy=="Strike starts melee in range; never replaces Auto Shot")
+''')
+case("Hunter melee strikes carry no melee start and cast only at a living selected enemy", SETUP + '''
+for _, id in ipairs({"hunter_raptor","hunter_mongoose","hunter_strider","hunter_counterattack","hunter_melee"}) do
+ local d=FM.Core.FindDefinition(id); local body=render(id)
+ assert(not body:find("/startattack",1,true) and not body:find("/targetenemy",1,true),id)
+ assert(d.attackPolicy=="Strike starts melee in range; never replaces Auto Shot",id)
+ if id=="hunter_melee" then assert(d.optional and body:find("/stopcasting",1,true),id)
+ else assert(not d.optional and d.category=="Attacks" and d.priority==5,id) end
+ local casts=TEST.actionsOf(TEST.macroModel(body,{target=enemy}),"cast")
+ assert(#casts>=1,id)
+ for _, cast in ipairs(casts) do assert(cast.unit=="target",id) end
+ for _, target in ipairs({{},friendly,dead}) do
+  local idle=TEST.macroModel(body,{target=target})
+  assert(#TEST.actionsOf(idle,"startattack")==0 and #TEST.actionsOf(idle,"cast")==0,id)
+ end
+end
+''')
+
 case("attack commands remain eligible even when the spell is on cooldown", SETUP + '''
-for _, id in ipairs({"shaman_shock","shaman_flameshock","shaman_stormstrike","warrior_execute","rogue_backstab","paladin_judgement"}) do
+for _, id in ipairs({"shaman_shock","shaman_flameshock","shaman_stormstrike","warrior_execute","rogue_backstab","paladin_judgement","paladin_exorcism","paladin_wrath","paladin_holyshock_enemy","paladin_consecration","warrior_taunt","rogue_mutilate","rogue_venom","rogue_ghostly"}) do
  local actions=TEST.macroModel(render(id),{target=enemy,spellUnavailable=true})
  assert(#TEST.actionsOf(actions,"startattack")==1, id)
 end
 ''')
 case("new melee buttons never acquire an unselected enemy", SETUP + '''
-for _, id in ipairs({"shaman_flameshock","shaman_stormstrike","warrior_heroic","warrior_cleave","warrior_execute","warrior_overpower","warrior_mortal","warrior_bloodthirst","warrior_whirlwind","warrior_revenge","rogue_backstab","rogue_eviscerate","rogue_hemorrhage","paladin_judgement","hunter_mongoose"}) do
+for _, id in ipairs({"shaman_flameshock","shaman_stormstrike","warrior_heroic","warrior_cleave","warrior_execute","warrior_overpower","warrior_mortal","warrior_bloodthirst","warrior_whirlwind","warrior_revenge","rogue_backstab","rogue_eviscerate","rogue_hemorrhage","paladin_judgement"}) do
  local body=render(id)
  assert(#TEST.actionsOf(TEST.macroModel(body,{target=enemy}),"startattack")==1,id)
  for _, target in ipairs({{},friendly,dead}) do
@@ -44,7 +78,7 @@ for _, id in ipairs({"shaman_flameshock","shaman_stormstrike","warrior_heroic","
 end
 ''')
 case("rogue damage does not start auto attacks from stealth on failed casts", SETUP + '''
-for _, id in ipairs({"rogue_sinister","rogue_backstab","rogue_eviscerate","rogue_hemorrhage","rogue_kick","rogue_kidney"}) do
+for _, id in ipairs({"rogue_sinister","rogue_backstab","rogue_eviscerate","rogue_hemorrhage","rogue_kick","rogue_kidney","rogue_mutilate","rogue_venom","rogue_ghostly"}) do
  assert(#TEST.actionsOf(TEST.macroModel(render(id),{target=enemy,stealth=true,spellUnavailable=true}),"startattack")==0,id)
 end
 ''')
@@ -64,12 +98,18 @@ for _, d in ipairs(FM.Catalog) do
  assert(type(d.attackPolicy)=="string", d.id)
 end
 ''')
-case("hunter shots use non-toggle Auto Shot while traps recall the pet", SETUP + '''
-for _, id in ipairs({"hunter_arcane","hunter_serpent"}) do
- local a=TEST.macroModel(render(id),{target=enemy})
- assert(TEST.actionsOf(a,"cast")[1].value=="!Auto Shot")
- assert(#TEST.actionsOf(a,"startattack")==0 and #TEST.actionsOf(a,"petattack")==0)
+# Shot buttons lost their Auto Shot recast in 0.11.1: Forever starts Auto Shot whenever a shot
+# casts, and an extra Auto Shot cast on each press delays the next shot (forever-bugs #43).
+case("hunter shots carry no Auto Shot recast, FM AutoShot stays non-toggle, traps recall the pet", SETUP + '''
+for id, name in pairs({hunter_arcane="Arcane Shot",hunter_serpent="Serpent Sting"}) do
+ local body=render(id); assert(not body:find("Auto Shot",1,true),id)
+ local a=TEST.macroModel(body,{target=enemy})
+ local casts=TEST.actionsOf(a,"cast")
+ assert(#casts==1 and casts[1].value==name and casts[1].unit=="target",id)
+ assert(#TEST.actionsOf(a,"startattack")==0 and #TEST.actionsOf(a,"petattack")==0,id)
 end
+local auto=TEST.actionsOf(TEST.macroModel(render("hunter_auto"),{target=enemy}),"cast")
+assert(#auto==1 and auto[1].value=="!Auto Shot")
 local a=TEST.macroModel(render("hunter_freezing"),{target=enemy})
 assert(#TEST.actionsOf(a,"petpassive")==1 and #TEST.actionsOf(a,"petfollow")==1)
 assert(#TEST.actionsOf(a,"startattack")==0)

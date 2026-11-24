@@ -1,7 +1,7 @@
 [
   [
     "first login creates only applicable learned macros",
-    "TEST.learn(75, \"Auto Shot\"); TEST.learn(1130, \"Hunter's Mark\"); TEST.login()\nassert(TEST.named(\"FM AutoShot\") and TEST.named(\"FM MarkPet\"))\nassert(not TEST.named(\"FM MendPet\") and not TEST.named(\"FM Heal\"))\nassert(TEST.writes == 8)"
+    "TEST.learn(75, \"Auto Shot\"); TEST.learn(1130, \"Hunter's Mark\"); TEST.login()\nassert(TEST.named(\"FM AutoShot\") and TEST.named(\"FM MarkPet\"))\nassert(not TEST.named(\"FM Easy\") and not TEST.named(\"FM MendPet\") and not TEST.named(\"FM Heal\"))\nassert(TEST.writes == 8)"
   ],
   [
     "repeated login and macro events are idempotent",
@@ -145,7 +145,7 @@
   ],
   [
     "each Classic class has a bounded valid unique collection",
-    "for _, class in ipairs({\"HUNTER\",\"WARRIOR\",\"ROGUE\",\"MAGE\",\"PRIEST\",\"DRUID\",\"PALADIN\",\"SHAMAN\",\"WARLOCK\"}) do\nlocal names, ids, count, starterCount = {}, {}, 0, 0\nfor _, definition in ipairs(FM.Catalog) do\n if definition.class == \"ALL\" or definition.class == class then\n  assert(not names[definition.name] and not ids[definition.id])\n  names[definition.name] = true; ids[definition.id] = true; count = count + 1; if not definition.optional then starterCount = starterCount + 1 end\n  local body = assert(FM.Core.Render(definition, function(req) return req.english end))\n  assert(#body <= 255 and #definition.name <= 16)\n  assert(not body:find(\"/run\", 1, true) and not body:find(\"/script\", 1, true))\n end\nend\nassert(count >= 8 and starterCount >= 8 and starterCount <= 28)\nend"
+    "for _, class in ipairs({\"HUNTER\",\"WARRIOR\",\"ROGUE\",\"MAGE\",\"PRIEST\",\"DRUID\",\"PALADIN\",\"SHAMAN\",\"WARLOCK\"}) do\nlocal names, ids, count, starterCount = {}, {}, 0, 0\nfor _, definition in ipairs(FM.Catalog) do\n if definition.class == \"ALL\" or definition.class == class then\n  assert(not names[definition.name] and not ids[definition.id])\n  names[definition.name] = true; ids[definition.id] = true; count = count + 1; if not definition.optional then starterCount = starterCount + 1 end\n  local body = assert(FM.Core.Render(definition, function(req) return req.english end))\n  assert(#body <= 255 and #definition.name <= 16)\n  assert(not body:find(\"/run\", 1, true) and not body:find(\"/script\", 1, true))\n end\nend\nassert(count >= 8 and starterCount >= 8 and starterCount <= 31)\nend"
   ],
   [
     "oversized localized names do not create truncated macros",
@@ -173,11 +173,11 @@
   ],
   [
     "hunter sequence: all learned abilities create a native sequence",
-    "TEST.learn(75, \"Auto Shot\"); TEST.learn(1978, \"Serpent Sting\"); TEST.learn(3044, \"Arcane Shot\")\nTEST.login(); local macro = assert(TEST.named(\"FM HuntSeq\"))\nassert(macro.character)\nassert(macro.body:find(\"/cast [harm,nodead] !Auto Shot\", 1, true))\nassert(macro.body:find(\"reset=target/combat/alt Serpent Sting, Arcane Shot, Arcane Shot, Arcane Shot\", 1, true))\nassert(not macro.body:find(\"null\", 1, true))\nassert(not macro.body:find(\"Hunter's Mark\", 1, true))\nassert(not macro.body:find(\"/targetenemy\", 1, true))\n"
+    "TEST.learn(75, \"Auto Shot\"); TEST.learn(1978, \"Serpent Sting\"); TEST.learn(3044, \"Arcane Shot\")\nTEST.login(); local macro = assert(TEST.named(\"FM HuntSeq\"))\nassert(macro.character)\nassert(macro.body:find(\"/petattack [harm,nodead]\\n/castsequence [harm,nodead] reset=target/combat/alt Serpent Sting, Arcane Shot, Arcane Shot, Arcane Shot\", 1, true))\nassert(not macro.body:find(\"Auto Shot\", 1, true))\nassert(not macro.body:find(\"null\", 1, true))\nassert(not macro.body:find(\"Hunter's Mark\", 1, true))\nassert(not macro.body:find(\"/targetenemy\", 1, true))\n"
   ],
   [
-    "hunter sequence: missing ability 75 prevents creation",
-    "TEST.learn(75, \"Auto Shot\"); TEST.learn(1978, \"Serpent Sting\"); TEST.learn(3044, \"Arcane Shot\")\nTEST.known[75] = false; TEST.login(); assert(not TEST.named(\"FM HuntSeq\"))"
+    "hunter sequence: Auto Shot is not a requirement because each shot starts it",
+    "TEST.learn(75, \"Auto Shot\"); TEST.learn(1978, \"Serpent Sting\"); TEST.learn(3044, \"Arcane Shot\")\nTEST.known[75] = false; TEST.login(); local macro = assert(TEST.named(\"FM HuntSeq\"))\nassert(not macro.body:find(\"Auto Shot\", 1, true))"
   ],
   [
     "hunter sequence: missing ability 1978 prevents creation",
@@ -193,7 +193,7 @@
   ],
   [
     "hunter sequence: localized names and higher ranks are used",
-    "TEST.locale = \"deDE\"\nTEST.names[75] = \"Automatischer Schuss\"; TEST.learn(990075, \"Automatischer Schuss\")\nTEST.names[1978] = \"Schlangenbiss\"; TEST.learn(991978, \"Schlangenbiss\")\nTEST.names[3044] = \"Arkaner Schuss\"; TEST.learn(993044, \"Arkaner Schuss\")\nTEST.login(); local body = assert(TEST.named(\"FM HuntSeq\")).body\nassert(body:find(\"!Automatischer Schuss\", 1, true))\nassert(body:find(\"Schlangenbiss, Arkaner Schuss, Arkaner Schuss, Arkaner Schuss\", 1, true))\n"
+    "TEST.locale = \"deDE\"\nTEST.names[75] = \"Automatischer Schuss\"; TEST.learn(990075, \"Automatischer Schuss\")\nTEST.names[1978] = \"Schlangenbiss\"; TEST.learn(991978, \"Schlangenbiss\")\nTEST.names[3044] = \"Arkaner Schuss\"; TEST.learn(993044, \"Arkaner Schuss\")\nTEST.login(); local body = assert(TEST.named(\"FM HuntSeq\")).body\nassert(not body:find(\"Automatischer Schuss\", 1, true))\nassert(body:find(\"Schlangenbiss, Arkaner Schuss, Arkaner Schuss, Arkaner Schuss\", 1, true))\n"
   ],
   [
     "hunter sequence: an existing character upgrades without changing managed macros",

@@ -29,7 +29,7 @@ def write(path, text):
 lua = LuaRuntime(unpack_returned_tuples=True)
 lua.execute("FM = {}")
 loader = lua.eval("function(source) assert(loadstring(source))('ForeverMacros', FM) end")
-for name in ("Catalog.lua", "PvP.lua", "Attacks.lua", "Library.lua", "Core.lua"):
+for name in ("Catalog.lua", "PvP.lua", "Attacks.lua", "Library.lua", "AutoSequences.lua", "Core.lua"):
     loader((ADDON / name).read_text(encoding="utf-8"))
 lua.execute("FM.ResolveForm = function(ids) return ids[1] == 768 and 3 or 1 end")
 
@@ -55,6 +55,7 @@ lines = [
     f"{len(definitions)} templates across nine Classic classes and general utility, including {sum(item['install'] == 'Choose in /fm' for item in definitions)} optional additions.",
     "Starter and attack templates install automatically for the current class and learned abilities while character slots remain. Choose other templates in /fm. English examples are shown here; names are checked against the learned spellbook.",
     "These patterns have not yet been validated in-game on Forever.", "",
+    "FM Auto sequence examples show the fullest starter recipe. At runtime, only learned abilities are selected; some steps prefer an upgrade or fallback. These bounded openers stop at null. They are not live optimal rotations. The separate workshop has nine editable class starters and eight custom slots; user-created slots are not part of this static catalog.", "",
     "Form and stance numbers below are examples. The addon resolves each character's actual slots when generating a macro.", "",
 ]
 for class_name in ["ALL"] + classes:
@@ -76,7 +77,7 @@ archive = ROOT / f"ForeverMacros-{VERSION}.zip"
 lua_files = [line.strip() for line in toc_text.splitlines() if line.strip().endswith(".lua")]
 art_files = validated_art_files(ADDON)
 source_files = ["ForeverMacros.toc"] + lua_files + art_files
-documentation_files = ["README.md", "CATALOG.md", "VALIDATION.md", "ATTACK-AUDIT.md", "RESEARCH.md", "SECURITY.md", "LICENSE"]
+documentation_files = ["README.md", "CATALOG.md", "VALIDATION.md", "ATTACK-AUDIT.md", "RESEARCH.md", "SECURITY.md", "THIRD-PARTY.md", "LICENSE"]
 preserve(archive)
 with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
     for name in source_files:

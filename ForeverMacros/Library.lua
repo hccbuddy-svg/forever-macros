@@ -1,5 +1,5 @@
 local _, FM = ...
-FM.Version = "0.4.1"
+FM.Version = "0.11.4"
 local byID = {}
 for _, d in ipairs(FM.Catalog) do byID[d.id] = d end
 local enemy = "[mod:shift,@focus,harm,nodead][@mouseover,harm,nodead][harm,nodead]"
@@ -35,11 +35,13 @@ local function melee(class, suffix, label, id, name, forms)
             .. (forms and " Requires the matching form; protects Prowl." or class == "ROGUE" and " Protects Stealth on failed casts." or ""),
         forms and "Melee in matching form, outside stealth" or "Melee on current enemy", {auto = true, category = "Attacks", forms = forms})
 end
+-- Forever starts Auto Shot whenever a shot casts, so shot buttons carry no Auto Shot line
+-- (an extra Auto Shot cast on each press delays the next shot, forever-bugs #43).
 local function shot(suffix, label, id, name)
-    add("HUNTER", "hunter_" .. suffix, label, {spell(id, name), spell(75, "Auto Shot")},
-        "#showtooltip {1}\n/cast [harm,nodead] !{2}\n/cast [harm,nodead] {1}",
-        "Current enemy only. Starts Auto Shot without toggling it off. Does not send your pet.",
-        "Ranged Auto Shot on current enemy", {auto = true, category = "Attacks"})
+    add("HUNTER", "hunter_" .. suffix, label, {spell(id, name)},
+        "#showtooltip {1}\n/cast [harm,nodead] {1}",
+        "Current enemy only. The game starts Auto Shot when the shot casts. Does not send your pet.",
+        "Shot starts Auto Shot on current enemy", {auto = true, category = "Attacks"})
 end
 
 -- Existing primary damage buttons are now automatic, with priority over utility.
@@ -49,13 +51,12 @@ for _, d in ipairs(FM.Catalog) do
     elseif d.class == "ALL" then d.priority = 50 end
 end
 
--- Preserve off-target utility without starting shots into a different selected enemy.
+-- Off-target utility (Concussive, Viper, Tranquilizing) adds no Auto Shot line. Note that the
+-- game itself may start Auto Shot on whichever enemy the shot hit.
 for _, id in ipairs({"hunter_concussive", "hunter_viper", "hunter_tranq"}) do
     local d = byID[id]
-    d.spells[2] = spell(75, "Auto Shot")
-    d.body = d.body .. "\n/stopmacro " .. offTarget .. "\n/cast [harm,nodead] !{2}"
-    d.description = "Shift-focus, then hostile mouseover, then target. Only the target branch starts Auto Shot."
-    d.attackPolicy = "Ranged Auto Shot on target branch only"
+    d.description = "Shift-focus, then hostile mouseover, then target. The game may start Auto Shot on the enemy you hit."
+    d.attackPolicy = "No attack-start command"
 end
 byID.hunter_raptor.body = byID.hunter_raptor.body:gsub("%] {1}", "] !{1}")
 shot("aimed", "AimedShot", 19434, "Aimed Shot")
@@ -81,7 +82,37 @@ add("HUNTER", "hunter_melee", "MeleeWeave", {spell(2973, "Raptor Strike"), spell
     "Stop your cast and attempt Raptor Strike and Mongoose Bite. Cooldowns and the global cooldown still apply.", "Melee on current enemy", {category = "Attacks"})
 add("HUNTER", "hunter_markshot", "MarkShot", {spell(1130, "Hunter's Mark"), spell(75, "Auto Shot")},
     "#showtooltip {1}\n/cast [harm,nodead] !{2}\n/cast [harm,nodead] {1}\n/petattack [harm,nodead]",
-    "Mark your current enemy, start Auto Shot, and send your pet.", "Ranged Auto Shot and pet on current enemy", {category = "Attacks"})
+    "Pull button, press once: mark your current enemy, start Auto Shot, and send your pet.", "Ranged Auto Shot and pet on current enemy", {category = "Attacks"})
+
+-- Hunter melee carries no /startattack. A Hunter's melee swing and Auto Shot share one
+-- auto-repeat slot: /startattack pressed at range swaps a running Auto Shot for a melee swing
+-- that cannot reach, and the Hunter stops shooting. The strike itself starts the swing when it
+-- casts in melee range, and fails harmlessly at range, so Auto Shot keeps running. (Zikorik's
+-- Forever Aimed Shot opener, 2026-10-31, casts Raptor Strike the same way.) Wing Clip's
+-- off-target stop line guarded only that start, so it goes too. The buttons stay automatic.
+for _, id in ipairs({"hunter_raptor", "hunter_wingclip", "hunter_mongoose", "hunter_strider",
+    "hunter_counterattack", "hunter_melee"}) do
+    local d = assert(byID[id], id)
+    d.body = d.body:gsub("\n/startattack %b[]", ""):gsub("\n/stopmacro [^\n]*$", "")
+    d.attackPolicy = "Strike starts melee in range; never replaces Auto Shot"
+end
+byID.hunter_raptor.description = "Attempt Raptor Strike on your target. It starts your melee swing when it lands in range; a press at range leaves Auto Shot running."
+byID.hunter_wingclip.description = "Shift: focus. Otherwise hostile mouseover, then target. Starts melee only when it lands in range; never stops Auto Shot."
+byID.hunter_mongoose.description = "Attempt Mongoose Bite on your target after a dodge. Starts melee only when it casts in range; never stops Auto Shot."
+byID.hunter_strider.description = "Attempt Strider Kick on your target. Starts melee only when it casts in range; never stops Auto Shot."
+byID.hunter_counterattack.description = "Attempt Counterattack on your target after a parry. Starts melee only when it casts in range; never stops Auto Shot."
+byID.hunter_melee.description = "Stop your cast and attempt Raptor Strike and Mongoose Bite. The strikes start melee in range; a press at range leaves Auto Shot running."
+
+-- Zikorik's WoW Forever Auto Shot guide (2026-10-31, youtu.be/4OgI99NbzQU), as shown on screen.
+-- Optional: both acquire a target on their own, which can pull a nearby enemy you did not pick.
+add("HUNTER", "hunter_shottarget", "ShotTarget", {spell(75, "Auto Shot")},
+    "#showtooltip {1}\n/cleartarget [dead][help]\n/targetenemy [noexists]\n/cast [@mouseover,harm,exists,nodead] !{1}; !{1}\n/petattack [@mouseover,harm,exists,nodead][harm,nodead]",
+    "Auto Shot that drops a dead or friendly target and picks the nearest enemy when you have none. Hostile mouseover first. Sends your pet to the same enemy.",
+    "Ranged Auto Shot and pet; picks an enemy when none is selected", {category = "Attacks"})
+add("HUNTER", "hunter_aimopen", "AimOpen", {spell(2973, "Raptor Strike"), spell(19434, "Aimed Shot"), spell(75, "Auto Shot")},
+    "#showtooltip {2}\n/cleartarget [dead][help]\n/targetenemy [noexists]\n/cast {1}\n/cast {2}\n/cast !{3}\n/petattack",
+    "Opener: picks an enemy when none is selected, Raptor Strike in melee or Aimed Shot at range, then Auto Shot and your pet. Press once per pull.",
+    "Strike or shot, Auto Shot and pet; picks an enemy when none is selected", {category = "Attacks"})
 for _, s in ipairs({{"hawk","Hawk",13165,"Aspect of the Hawk"},{"monkey","Monkey",13163,"Aspect of the Monkey"},
     {"cheetah","Cheetah",5118,"Aspect of the Cheetah"},{"pack","Pack",13159,"Aspect of the Pack"},
     {"wild","Wild",20043,"Aspect of the Wild"},{"beast","Beast",13161,"Aspect of the Beast"},
@@ -151,6 +182,10 @@ for _, s in ipairs({{"battle","BattleShout",6673,"Battle Shout"},{"demo","DemoSh
     {"piercing","PierceHowl",12323,"Piercing Howl"}}) do cast("WARRIOR", s[1],s[2],s[3],s[4],"") end
 for _, s in ipairs({{"rupture","Rupture",1943,"Rupture"},{"riposte","Riposte",14251,"Riposte"},
     {"expose","ExposeArmor",8647,"Expose Armor"},{"slice","SliceDice",5171,"Slice and Dice"}}) do melee("ROGUE", unpack(s)) end
+-- Forever talent IDs from the attributed October 8 tree snapshot, not Retail IDs.
+melee("ROGUE","mutilate","Mutilate",1310707,"Mutilate")
+melee("ROGUE","venom","Venom",1310703,"Venom")
+melee("ROGUE","ghostly","GhostlyStrike",14278,"Ghostly Strike")
 for _, s in ipairs({{"ambush","Ambush",8676,"Ambush"},{"garrote","Garrote",703,"Garrote"},
     {"pickpocket","PickPocket",921,"Pick Pocket"}}) do
     cast("ROGUE",s[1],s[2],s[3],s[4],"[stealth,harm,nodead]", {category = "Attacks", description = "Stealthed current enemy only. No auto attack before the opener."})
@@ -172,7 +207,7 @@ end
 melee("DRUID","swipe","Swipe",779,"Swipe",{5487,9634})
 melee("DRUID","primalbite","PrimalBite",nil,"Primal Bite",{5487,9634})
 cast("DRUID", "shiftingpower", "ShiftingPower", nil, "Shifting Power", "[form:{form}]", {
-    forms = {768}, description = "Use Shifting Power while already in Cat Form. Spends mana for energy. Does not shift forms or start attacks."})
+    forms = {768}, description = "Use Shifting Power while already in Cat Form. Spends mana for energy. The game rejects it at full energy. Does not shift forms or start attacks."})
 for _, s in ipairs({{"wrath","Wrath",5176,"Wrath"},{"starfire","Starfire",2912,"Starfire"},{"moonfire","Moonfire",8921,"Moonfire"}}) do
     cast("DRUID",s[1],s[2],s[3],s[4],"enemy",{category="Attacks"})
 end
@@ -180,8 +215,12 @@ for _, s in ipairs({{"mark","MarkWild",1126,"Mark of the Wild"},{"thorns","Thorn
     cast("DRUID",s[1],s[2],s[3],s[4],"friend")
 end
 cast("DRUID","regrowth_shift","ShiftRegrow",8936,"Regrowth","friend",{prefix="/cancelform\n",description="Leave animal form, then heal a friendly mouseover, target, or self. Costs the form and heal mana when shifting back."})
-cast("DRUID","prowl","Prowl",5215,"Prowl","",{prefix="/stopattack\n"})
-cast("DRUID","dash","Dash",1850,"Dash","")
+add("DRUID","druid_prowl","Prowl",{spell(5215,"Prowl")},
+    "#showtooltip {1}\n/stopattack\n/cast [form:{form},nocombat,nostealth] !{1}",
+    "Stop attacking and enter Prowl only while already in Cat Form outside combat. Repeated presses leave Prowl active. Does not shift forms.",
+    "Stop attacks; enter stealth in Cat Form",{forms={768}})
+cast("DRUID","dash","Dash",1850,"Dash","[form:{form}]",{forms={768},
+    description="Use Dash while already in Cat Form. Does not shift forms, cancel Prowl, or start attacks."})
 cast("DRUID","growl","Growl",6795,"Growl","enemy")
 cast("DRUID","feralcharge","FeralCharge",16979,"Feral Charge","enemy")
 cast("DRUID","tranquility","Tranquility",740,"Tranquility","[nochanneling]")
@@ -193,9 +232,20 @@ cast("PALADIN","exorcism","Exorcism",879,"Exorcism","enemy",{category="Attacks"}
 cast("PALADIN","wrath","HammerWrath",24275,"Hammer of Wrath","enemy",{category="Attacks"})
 cast("PALADIN","holyshock","HolyShock",20473,"Holy Shock","friend")
 cast("PALADIN","holyshock_enemy","ShockEnemy",20473,"Holy Shock","enemy",{category="Attacks"})
+for _, id in ipairs({"paladin_exorcism","paladin_wrath","paladin_holyshock_enemy","warrior_taunt"}) do
+    local d=byID[id]
+    d.body=d.body .. "\n/stopmacro " .. offTarget .. "\n/startattack [harm,nodead]"
+    d.description="Shift-focus, then hostile mouseover, then target. Only the target branch starts melee swings, including when the spell cannot cast."
+    d.attackPolicy="Melee on target branch only"
+    d.optional=false; d.category="Attacks"; d.priority=5
+end
+byID.paladin_consecration.body=byID.paladin_consecration.body .. "\n/startattack [harm,nodead]"
+byID.paladin_consecration.description="Attempt Consecration at your feet. Also start melee swings at a living selected enemy, even if the spell cannot cast."
+byID.paladin_consecration.attackPolicy="Melee on current enemy"
+byID.paladin_consecration.optional=false; byID.paladin_consecration.priority=5
 for _, s in ipairs({{"might","Might",19740,"Blessing of Might"},{"wisdom","Wisdom",19742,"Blessing of Wisdom"},
-    {"kings","Kings",20217,"Blessing of Kings"},{"salvation","Salvation",1038,"Blessing of Salvation"},
-    {"light","Light",19977,"Blessing of Light"},{"sanctuary","Sanctuary",20911,"Blessing of Sanctuary"}}) do
+    {"kings","Kings",20217,"Blessing of Kings"}}) do
+    -- Blessing of Light, Salvation and Sanctuary are no longer taught since the 30 Oct Paladin rebuild.
     cast("PALADIN",s[1],s[2],s[3],s[4],"friend")
 end
 for _, s in ipairs({{"sealright","SealRight",21084,"Seal of Righteousness"},{"sealcommand","SealCommand",20375,"Seal of Command"},
@@ -208,22 +258,36 @@ for _, s in ipairs({{"bolt","LightnBolt",403,"Lightning Bolt"},{"chainlight","Ch
     local d = melee("SHAMAN",s[1],s[2],s[3] or nil,s[4])
     d.description = d.description .. " Intended for melee weaving; casting can delay swings."
 end
-cast("SHAMAN","riptide","Riptide",nil,"Riptide","friend")
+-- Riptide is a core heal once talented, so it installs when learned like the other heals.
+cast("SHAMAN","riptide","Riptide",nil,"Riptide","friend",{auto=true})
+-- One press: Nature's Swiftness (off the global cooldown), then the heal as an instant.
+for _, s in ipairs({{"nswave","NSWave",331,"Healing Wave","Biggest single instant heal."},
+    {"nschain","NSChain",1064,"Chain Heal","Instant group heal; 25% stronger on a target with your Riptide."}}) do
+    local base = "#showtooltip {2}\n/stopcasting\n/cast {1}\n/cast "
+    add("SHAMAN","shaman_" .. s[1],s[2],{spell(16188,"Nature's Swiftness"),spell(s[3],s[4])},
+        base .. friend .. " {2}",
+        "Emergency: stops your cast, uses Nature's Swiftness, then " .. s[4] .. " instantly. " .. s[5]
+            .. " Alt: self. Otherwise friendly mouseover, target, then self. While Nature's Swiftness is on cooldown the heal casts at normal speed.",
+        nil,{unitBody = base .. "[@{unit},help,nodead] {2}"})
+end
 cast("SHAMAN","farseer","FarSeer",nil,"Rage of the Far Seer","")
-cast("SHAMAN","mastery","ElemMastery",16166,"Elemental Mastery","")
+-- Forever renamed Elemental Mastery (16166) to Lightning Mastery; the macro keeps its name.
+cast("SHAMAN","mastery","ElemMastery",16166,"Lightning Mastery","").spells[1].aliases = {"Elemental Mastery"}
 cast("SHAMAN","swiftness","NatSwift",16188,"Nature's Swiftness","")
 for _, s in ipairs({{"searing","Searing",3599,"Searing Totem"},{"magma","Magma",8190,"Magma Totem"},
-    {"firenova","FireNova",1535,"Fire Nova Totem"},{"manaspring","ManaSpring",5675,"Mana Spring Totem"},
+    {"firenova","FireNova",1535,"Fire Nova"},{"manaspring","ManaSpring",5675,"Mana Spring Totem"},
     {"manatide","ManaTide",16190,"Mana Tide Totem"},{"healingstream","HealStream",5394,"Healing Stream Totem"},
     {"windfury","Windfury",8512,"Windfury Totem"},{"graceair","GraceAir",8835,"Grace of Air Totem"},
     {"strength","Strength",8075,"Strength of Earth Totem"},{"stoneclaw","Stoneclaw",5730,"Stoneclaw Totem"},
     {"poisonclean","PoisonClean",8166,"Poison Cleansing Totem"},{"diseaseclean","DiseaseClean",8170,"Disease Cleansing Totem"}}) do
     cast("SHAMAN",s[1],s[2],s[3],s[4],"")
 end
+-- Fire Nova is a spell in Forever, no longer a totem.
+byID.shaman_firenova.spells[1].aliases = {"Fire Nova Totem"}
 
 for _, class in ipairs({"MAGE", "PRIEST", "WARLOCK"}) do
     add(class,class:lower() .. "_wand","Wand",{spell(5019,"Shoot")},"#showtooltip {1}\n/cast [harm,nodead] !{1}",
-        "Start wand shooting at your current enemy without toggling it off. Use this separate button between spells.",
+        "Attempt wand shooting at your current enemy with !Shoot. Repeat-press behavior has an open Forever beta bug report; test it on your build. Use this separate button between spells.",
         "Ranged wand Shoot on current enemy",{auto=true,category="Attacks"})
 end
 for _, s in ipairs({{"fireball","Fireball",133,"Fireball"},{"scorch","Scorch",2948,"Scorch"}}) do
@@ -244,6 +308,10 @@ for _, s in ipairs({{"smite","Smite",585,"Smite"},{"holyfire","HolyFire",14914,"
     {"pain","ShadowPain",589,"Shadow Word: Pain"},{"mindblast","MindBlast",8092,"Mind Blast"},
     {"manaburn","ManaBurn",8129,"Mana Burn"}}) do cast("PRIEST",s[1],s[2],s[3],s[4],"enemy",{category="Attacks"}) end
 cast("PRIEST","flay","MindFlay",15407,"Mind Flay","[nochanneling,harm,nodead]",{category="Attacks"})
+cast("PRIEST","penance_heal","PenanceHeal",nil,"Penance","friend",{prefix="/stopmacro [channeling]\n",
+    description="Heal with Penance. Alt: self, then friendly mouseover, target, self. Supports teammate assignment. Waits for any current channel to finish."})
+cast("PRIEST","penance_harm","PenanceHarm",nil,"Penance","enemy",{prefix="/stopmacro [channeling]\n",category="Attacks",
+    description="Damage with Penance. Shift: hostile focus, then hostile mouseover, target. Waits for any current channel to finish. Does not start melee or wand attacks."})
 cast("PRIEST","greater","GreaterHeal",2060,"Greater Heal","friend")
 cast("PRIEST","fortitude","Fortitude",1243,"Power Word: Fortitude","friend")
 cast("PRIEST","spirit","DivineSpirit",14752,"Divine Spirit","friend")
@@ -256,7 +324,8 @@ for _, s in ipairs({{"shadowbolt","ShadowBolt",686,"Shadow Bolt"},{"immolate","I
     {"searingpain","SearingPain",5676,"Searing Pain"},{"soulfire","SoulFire",6353,"Soul Fire"},
     {"shadowburn","Shadowburn",17877,"Shadowburn"},{"conflagrate","Conflagrate",17962,"Conflagrate"},
     {"elements","Elements",1490,"Curse of the Elements"},{"recklessness","RecklessCurse",704,"Curse of Recklessness"},
-    {"weakness","Weakness",702,"Curse of Weakness"},{"doom","Doom",603,"Curse of Doom"}}) do cast("WARLOCK",s[1],s[2],s[3],s[4],"enemy",{category="Attacks"}) end
+    {"weakness","Weakness",702,"Curse of Weakness"},{"doom","Doom",603,"Bane of Doom"}}) do cast("WARLOCK",s[1],s[2],s[3],s[4],"enemy",{category="Attacks"}) end
+byID.warlock_doom.spells[1].aliases = {"Curse of Doom"}
 for _, s in ipairs({{"drainlife","DrainLife",689,"Drain Life"},{"drainsoul","DrainSoul",1120,"Drain Soul"},
     {"drainmana","DrainMana",5138,"Drain Mana"}}) do cast("WARLOCK",s[1],s[2],s[3],s[4],"[nochanneling,harm,nodead]",{category="Attacks"}) end
 cast("WARLOCK","rainfire","RainFire",5740,"Rain of Fire","[@cursor]",{category="Attacks"})
@@ -275,4 +344,22 @@ for _, s in ipairs({{"MAGE","cancelblock","CancelBlock",45438,"Ice Block"},
         add(s[1],s[1]:lower() .. "_" .. s[2],s[3],{spell(s[4],s[5])},"#showtooltip {1}\n/cancelaura {1}",
             "Cancel your " .. s[5] .. " aura. This button does not cast it.",nil,{pvp=true})
     end
+end
+
+-- Ground-targeted spells cast at the mouse pointer: no targeting circle and no second click.
+-- These are every placed ability the Forever classes have (Blizzard and Flamestrike, Rain of
+-- Fire, Hurricane, Volley and Flare, Distract); traps still drop at your feet. Each installs
+-- automatically once learned. FM.GROUND lists them so tests can hold every template to it.
+cast("DRUID","hurricane","Hurricane",16914,"Hurricane","[@cursor]",{category="Attacks"})
+FM.GROUND = {mage_blizzard = "Blizzard", mage_flamestrike = "Flamestrike", warlock_rainfire = "Rain of Fire",
+    druid_hurricane = "Hurricane", hunter_volley = "Volley", hunter_flare = "Flare", rogue_distract = "Distract"}
+for id, name in pairs(FM.GROUND) do
+    local d = assert(byID[id], id)
+    assert(d.spells and d.spells[1] and d.spells[1].english == name, id)
+    d.body = "#showtooltip {1}\n/cast [@cursor] {1}"
+    d.description = "Drops " .. name .. " at your mouse pointer the moment you press it: no targeting circle, no extra click. Point at the ground first."
+    -- Hunters already fill their character macro slots with automatic buttons, so Flare stays a
+    -- /fm choice (still a cursor cast); every other placed spell installs once learned.
+    d.optional = id == "hunter_flare"; d.priority = d.optional and 20 or 5
+    d.category = (id == "hunter_flare" or id == "rogue_distract") and "Utility" or "Attacks"
 end

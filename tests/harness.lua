@@ -26,9 +26,17 @@ function CreateFrame(kind, name, parent)
     end
     function frame:SetFontString(value) self.fontString = value end
     function frame:GetText() return self.value or "" end
-    function frame:Show() self.shown = true end
-    function frame:Hide() self.shown = false end
+    function frame:Show() local old=self.shown;self.shown=true;if not old and self.scripts.OnShow then self.scripts.OnShow(self) end end
+    function frame:Hide() local old=self.shown;self.shown=false;if old and self.scripts.OnHide then self.scripts.OnHide(self) end end
     function frame:IsShown() return self.shown end
+    -- Like the game: shown and every parent visible (a replacement bag addon
+    -- keeps Blizzard's bags shown inside a hidden parent).
+    function frame:IsVisible()
+        if not self.shown then return false end
+        local p = self.parent
+        if type(p) == "table" and p.IsVisible then return p:IsVisible() end
+        return true
+    end
     function frame:Enable() self.enabled = true; if self.scripts.OnEnable then self.scripts.OnEnable(self) end end
     function frame:Disable() self.enabled = false; if self.scripts.OnDisable then self.scripts.OnDisable(self) end end
     function frame:IsEnabled() return self.enabled end
@@ -43,10 +51,26 @@ function CreateFrame(kind, name, parent)
     function frame:SetTexCoord(...) self.coords = {...} end
     function frame:SetVertexColor(...) self.color = {...} end
     function frame:SetAlpha(value) self.alpha = value end
+    function frame:SetScrollChild(child) self.scrollChild = child end
+    function frame:SetVerticalScroll(value) self.scroll = value end
     function frame:Click() if self.enabled and self.scripts.OnClick then self.scripts.OnClick(self) end end
     for _, method in ipairs({"SetPoint", "SetJustifyH", "SetJustifyV", "SetTextColor", "SetFont", "SetAutoFocus", "SetMaxLetters", "ClearFocus", "SetWordWrap",
         "SetFrameStrata", "SetClampedToScreen", "SetMovable", "EnableMouse", "RegisterForDrag", "StartMoving", "StopMovingOrSizing",
-        "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor", "SetScale", "SetShadowOffset"}) do frame[method] = function() end end
+        "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor", "SetScale", "SetShadowOffset",
+        "SetMultiLine", "SetFontObject", "SetFocus", "HighlightText", "ClearAllPoints"}) do frame[method] = function() end end
+    function frame:HookScript(event,fn) local old=self.scripts[event];self.scripts[event]=function(...) if old then old(...) end;fn(...) end end
+    function frame:SetParent(value) self.parent=value end
+    function frame:GetParent() return self.parent end
+    function frame:SetScale(value) self.scale=value end
+    function frame:GetScale() return self.scale or 1 end
+    function frame:SetHeight(value) self.height=value end
+    function frame:EnableMouse(value) self.mouse=value end
+    function frame:IsMouseEnabled() return self.mouse~=false end
+    function frame:SetPoint(...) self.point={...} end
+    function frame:ClearAllPoints() self.point=nil end
+    function frame:GetNumPoints() return self.point and 1 or 0 end
+    function frame:GetPoint() return unpack(self.point or {"CENTER", UIParent, "CENTER", 20, -160}) end
+    function frame:SetFrameStrata(value) self.strata=value end
     if name then _G[name] = frame end
     table.insert(TEST.frames, frame)
     return frame
@@ -78,7 +102,7 @@ function TEST.advance(seconds)
     end
     TEST.time = target
 end
-function GetBuildInfo() return TEST.version, "70205", "Oct 2 2026", 16001 end
+function GetBuildInfo() return TEST.version, "70338", "Oct 9 2026", 16001 end
 function GetServerTime() return 100000 end
 function UnitClass() return TEST.class, TEST.class end
 function UnitFactionGroup() return TEST.faction, TEST.factionLabel or TEST.faction end

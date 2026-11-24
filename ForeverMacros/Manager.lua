@@ -17,7 +17,8 @@ function M.Owned(id)
     for _, macro in ipairs(snapshot.macros) do
         if macro.name == record.name then found = macro; count = count + 1 end
     end
-    if count == 1 and found.character and FM.Managed.SameBody(found.body, record.body) then return found end
+    if count == 1 and found.character and (FM.Managed.SameBody(found.body, record.body)
+        or FM.Managed.Reverted(db, id, found.body)) then return found end
 end
 
 function M.Roster()
@@ -62,6 +63,7 @@ end
 
 function M.RefreshCache()
     if FM.InCombat() or not API.Ready() or not API.Supported() then return end
+    if FM.AutoSequences then FM.AutoSequences.Refresh() end
     M.cache = {}
     local _, class = UnitClass("player")
     local seen = {}
@@ -73,6 +75,7 @@ function M.RefreshCache()
             end
         end
     end
+    if FM.Workshop then FM.Workshop.RefreshCache(seen) end
 end
 
 function M.Preview(definition, choice)
@@ -107,6 +110,7 @@ function M.Process()
             end
         end
         if ok then
+            if FM.Workshop then FM.Workshop.Confirmed(d) end
             db.choices[id] = copy(choice)
             db.wanted[id] = nil
             M.notice = d.name .. " updated. " .. M.AssignmentText(choice) .. "."
@@ -161,6 +165,7 @@ function M.SyncInstalled()
     local db = API.State()
     if FM.InCombat() or not db or not db.enabled or not API.Ready() or not API.Supported()
         or M.fault or API.Faulted() then return end
+    if FM.AutoSequences then FM.AutoSequences.Refresh() end
     local _, class = UnitClass("player")
     for _, d in ipairs(FM.Catalog) do
         if (d.class == class or d.class == "ALL") and not db.skipped[d.id] and not M.pending[d.id] then
@@ -182,6 +187,7 @@ function M.UpdateInstalled()
     if not db or not API.Ready() or not API.Supported() then return nil, "Character data is not ready or this client is unsupported." end
     if not db.enabled then return nil, "Updates are paused. Use /fm on first." end
     if M.fault or API.Faulted() then return nil, "Check your macros before /fm retry." end
+    M.RefreshCache()
     local _, class = UnitClass("player")
     local count = 0
     for _, d in ipairs(FM.Catalog) do
@@ -246,6 +252,23 @@ function M.BindingFor(name)
         if not found and macroName == name and GetBindingKey then found = GetBindingKey(command) end
     end)
     return found
+end
+
+function M.BindingsFor(name)
+    local found,seen={},{}
+    M.BarButtons(function(_,macroName,command)
+        if macroName==name and GetBindingKey then
+            local ok,first,second=pcall(GetBindingKey,command)
+            if ok then
+                for _,value in pairs({first,second}) do
+                    if not secret(value) and type(value)=="string" and value~="" and not seen[value] then
+                        found[#found+1]=value; seen[value]=true
+                    end
+                end
+            end
+        end
+    end)
+    table.sort(found); return found
 end
 
 function M.RefreshLabels()
