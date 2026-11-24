@@ -17,7 +17,8 @@ function M.Owned(id)
     for _, macro in ipairs(snapshot.macros) do
         if macro.name == record.name then found = macro; count = count + 1 end
     end
-    if count == 1 and found.character and FM.Managed.SameBody(found.body, record.body) then return found end
+    if count == 1 and found.character and (FM.Managed.SameBody(found.body, record.body)
+        or FM.Managed.Reverted(db, id, found.body)) then return found end
 end
 
 function M.Roster()

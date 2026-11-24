@@ -1,6 +1,6 @@
 # Macro catalog
 
-391 templates across nine Classic classes and general utility, including 239 optional additions.
+396 templates across nine Classic classes and general utility, including 238 optional additions.
 Starter and attack templates install automatically for the current class and learned abilities while character slots remain. Choose other templates in /fm. English examples are shown here; names are checked against the learned spellbook.
 These patterns have not yet been validated in-game on Forever.
 
@@ -633,6 +633,19 @@ Attack behavior: No attack-start command.
 /cast [nochanneling] Tranquility
 ```
 
+### FM Hurricane
+
+Template ID: druid_hurricane. Drops Hurricane at your mouse pointer the moment you press it: no targeting circle, no extra click. Point at the ground first.
+
+Installation: Automatic starter. Teammate assignment: no.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip Hurricane
+/cast [@cursor] Hurricane
+```
+
 ### FM AutoOpen
 
 Template ID: auto_druid_open. Caster-form ranged opener. Change form manually afterward. Learned steps only. One press per cast; stops at the end. Alt resets. Changing target or leaving combat also resets. A fixed starter, not a live optimal rotation.
@@ -749,17 +762,15 @@ Attack behavior: Ranged Auto Shot and pet on current enemy.
 
 ### FM Concuss
 
-Template ID: hunter_concussive. Shift-focus, then hostile mouseover, then target. Only the target branch starts Auto Shot.
+Template ID: hunter_concussive. Shift-focus, then hostile mouseover, then target. The game may start Auto Shot on the enemy you hit.
 
 Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: Ranged Auto Shot on target branch only.
+Attack behavior: No attack-start command.
 
 ```text
 #showtooltip Concussive Shot
 /cast [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead][harm,nodead] Concussive Shot
-/stopmacro [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead]
-/cast [harm,nodead] !Auto Shot
 ```
 
 ### FM MendPet
@@ -803,15 +814,14 @@ Attack behavior: No attack-start command.
 
 ### FM Raptor
 
-Template ID: hunter_raptor. Start melee attacking and attempt Raptor Strike on your target.
+Template ID: hunter_raptor. Attempt Raptor Strike on your target. It starts your melee swing when it lands in range; a press at range leaves Auto Shot running.
 
 Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: Melee on current enemy.
+Attack behavior: Strike starts melee in range; never replaces Auto Shot.
 
 ```text
 #showtooltip Raptor Strike
-/startattack [harm,nodead]
 /cast [harm,nodead] !Raptor Strike
 ```
 
@@ -834,16 +844,15 @@ Attack behavior: Stop attacks.
 
 ### FM HuntSeq
 
-Template ID: hunter_sequence. Press repeatedly: Serpent Sting, then three Arcane Shots. Waits on cooldowns. Alt resets; use MarkPet separately.
+Template ID: hunter_sequence. Press repeatedly: Serpent Sting, then three Arcane Shots. Each shot starts Auto Shot. Waits on cooldowns. Alt resets; use MarkPet separately.
 
 Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: Ranged Auto Shot and pet on current enemy.
+Attack behavior: Pet attack; shots start Auto Shot on current enemy.
 
 ```text
 #showtooltip
 /petattack [harm,nodead]
-/cast [harm,nodead] !Auto Shot
 /castsequence [harm,nodead] reset=target/combat/alt Serpent Sting, Arcane Shot, Arcane Shot, Arcane Shot
 ```
 
@@ -867,17 +876,15 @@ Attack behavior: Stop attacks for crowd control.
 
 ### FM WingClip
 
-Template ID: hunter_wingclip. Shift-focus, then hostile mouseover, then target. Only the target branch starts melee swings.
+Template ID: hunter_wingclip. Shift: focus. Otherwise hostile mouseover, then target. Starts melee only when it lands in range; never stops Auto Shot.
 
 Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: Melee on target branch only.
+Attack behavior: Strike starts melee in range; never replaces Auto Shot.
 
 ```text
 #showtooltip Wing Clip
 /cast [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead][harm,nodead] Wing Clip
-/stopmacro [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead]
-/startattack [harm,nodead]
 ```
 
 ### FM Intimidate
@@ -938,193 +945,178 @@ Attack behavior: No attack-start command.
 
 ### FM ViperSting
 
-Template ID: hunter_viper. Shift-focus, then hostile mouseover, then target. Only the target branch starts Auto Shot.
+Template ID: hunter_viper. Shift-focus, then hostile mouseover, then target. The game may start Auto Shot on the enemy you hit.
 
 Installation: Choose in /fm. Teammate assignment: no.
 
-Attack behavior: Ranged Auto Shot on target branch only.
+Attack behavior: No attack-start command.
 
 ```text
 #showtooltip Viper Sting
 /cast [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead][harm,nodead] Viper Sting
-/stopmacro [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead]
-/cast [harm,nodead] !Auto Shot
 ```
 
 ### FM TranqShot
 
-Template ID: hunter_tranq. Shift-focus, then hostile mouseover, then target. Only the target branch starts Auto Shot.
+Template ID: hunter_tranq. Shift-focus, then hostile mouseover, then target. The game may start Auto Shot on the enemy you hit.
 
 Installation: Choose in /fm. Teammate assignment: no.
 
-Attack behavior: Ranged Auto Shot on target branch only.
+Attack behavior: No attack-start command.
 
 ```text
 #showtooltip Tranquilizing Shot
 /cast [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead][harm,nodead] Tranquilizing Shot
-/stopmacro [mod:shift,@focus,harm,nodead][@mouseover,harm,nodead]
-/cast [harm,nodead] !Auto Shot
 ```
 
 ### FM Mongoose
 
-Template ID: hunter_mongoose. Current enemy only. Starts melee swings even if the ability is unavailable.
+Template ID: hunter_mongoose. Attempt Mongoose Bite on your target after a dodge. Starts melee only when it casts in range; never stops Auto Shot.
 
 Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: Melee on current enemy.
+Attack behavior: Strike starts melee in range; never replaces Auto Shot.
 
 ```text
 #showtooltip Mongoose Bite
-/startattack [harm,nodead]
 /cast [harm,nodead] Mongoose Bite
 ```
 
 ### FM ArcaneShot
 
-Template ID: hunter_arcane. Current enemy only. Starts ranged Auto Shot and attempts the shot. Does not send your pet.
+Template ID: hunter_arcane. Current enemy only. Attempts the shot; the game starts Auto Shot when it casts. Does not send your pet.
 
 Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: Ranged Auto Shot on current enemy.
+Attack behavior: Shot starts Auto Shot on current enemy.
 
 ```text
 #showtooltip Arcane Shot
-/cast [harm,nodead] !Auto Shot
 /cast [harm,nodead] Arcane Shot
 ```
 
 ### FM SerpentSting
 
-Template ID: hunter_serpent. Current enemy only. Starts ranged Auto Shot and attempts the shot. Does not send your pet.
+Template ID: hunter_serpent. Current enemy only. Attempts the shot; the game starts Auto Shot when it casts. Does not send your pet.
 
 Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: Ranged Auto Shot on current enemy.
+Attack behavior: Shot starts Auto Shot on current enemy.
 
 ```text
 #showtooltip Serpent Sting
-/cast [harm,nodead] !Auto Shot
 /cast [harm,nodead] Serpent Sting
 ```
 
 ### FM AimedShot
 
-Template ID: hunter_aimed. Current enemy only. Starts Auto Shot without toggling it off. Does not send your pet.
+Template ID: hunter_aimed. Current enemy only. The game starts Auto Shot when the shot casts. Does not send your pet.
 
 Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: Ranged Auto Shot on current enemy.
+Attack behavior: Shot starts Auto Shot on current enemy.
 
 ```text
 #showtooltip Aimed Shot
-/cast [harm,nodead] !Auto Shot
 /cast [harm,nodead] Aimed Shot
 ```
 
 ### FM MultiShot
 
-Template ID: hunter_multi. Current enemy only. Starts Auto Shot without toggling it off. Does not send your pet.
+Template ID: hunter_multi. Current enemy only. The game starts Auto Shot when the shot casts. Does not send your pet.
 
 Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: Ranged Auto Shot on current enemy.
+Attack behavior: Shot starts Auto Shot on current enemy.
 
 ```text
 #showtooltip Multi-Shot
-/cast [harm,nodead] !Auto Shot
 /cast [harm,nodead] Multi-Shot
 ```
 
 ### FM ScorpidSting
 
-Template ID: hunter_scorpid. Current enemy only. Starts Auto Shot without toggling it off. Does not send your pet.
+Template ID: hunter_scorpid. Current enemy only. The game starts Auto Shot when the shot casts. Does not send your pet.
 
 Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: Ranged Auto Shot on current enemy.
+Attack behavior: Shot starts Auto Shot on current enemy.
 
 ```text
 #showtooltip Scorpid Sting
-/cast [harm,nodead] !Auto Shot
 /cast [harm,nodead] Scorpid Sting
 ```
 
 ### FM DistractShot
 
-Template ID: hunter_distracting. Current enemy only. Starts Auto Shot without toggling it off. Does not send your pet.
+Template ID: hunter_distracting. Current enemy only. The game starts Auto Shot when the shot casts. Does not send your pet.
 
 Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: Ranged Auto Shot on current enemy.
+Attack behavior: Shot starts Auto Shot on current enemy.
 
 ```text
 #showtooltip Distracting Shot
-/cast [harm,nodead] !Auto Shot
 /cast [harm,nodead] Distracting Shot
 ```
 
 ### FM SniperShot
 
-Template ID: hunter_sniper. Current enemy only. Starts Auto Shot without toggling it off. Does not send your pet.
+Template ID: hunter_sniper. Current enemy only. The game starts Auto Shot when the shot casts. Does not send your pet.
 
 Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: Ranged Auto Shot on current enemy.
+Attack behavior: Shot starts Auto Shot on current enemy.
 
 ```text
 #showtooltip Sniper Shot
-/cast [harm,nodead] !Auto Shot
 /cast [harm,nodead] Sniper Shot
 ```
 
 ### FM SummonHawk
 
-Template ID: hunter_summonhawk. Current enemy only. Starts Auto Shot without toggling it off. Does not send your pet.
+Template ID: hunter_summonhawk. Current enemy only. The game starts Auto Shot when the shot casts. Does not send your pet.
 
 Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: Ranged Auto Shot on current enemy.
+Attack behavior: Shot starts Auto Shot on current enemy.
 
 ```text
 #showtooltip Summon Hawk
-/cast [harm,nodead] !Auto Shot
 /cast [harm,nodead] Summon Hawk
 ```
 
 ### FM StriderKick
 
-Template ID: hunter_strider. Current enemy only. Starts melee swings even when the spell cannot cast.
+Template ID: hunter_strider. Attempt Strider Kick on your target. Starts melee only when it casts in range; never stops Auto Shot.
 
 Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: Melee on current enemy.
+Attack behavior: Strike starts melee in range; never replaces Auto Shot.
 
 ```text
 #showtooltip Strider Kick
-/startattack [harm,nodead]
 /cast [harm,nodead] Strider Kick
 ```
 
 ### FM Counteratk
 
-Template ID: hunter_counterattack. Current enemy only. Starts melee swings even when the spell cannot cast.
+Template ID: hunter_counterattack. Attempt Counterattack on your target after a parry. Starts melee only when it casts in range; never stops Auto Shot.
 
 Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: Melee on current enemy.
+Attack behavior: Strike starts melee in range; never replaces Auto Shot.
 
 ```text
 #showtooltip Counterattack
-/startattack [harm,nodead]
 /cast [harm,nodead] Counterattack
 ```
 
 ### FM Volley
 
-Template ID: hunter_volley. Place Volley at the cursor. No Auto Shot to interrupt the channel.
+Template ID: hunter_volley. Drops Volley at your mouse pointer the moment you press it: no targeting circle, no extra click. Point at the ground first.
 
-Installation: Choose in /fm. Teammate assignment: no.
+Installation: Automatic starter. Teammate assignment: no.
 
 Attack behavior: No attack-start command.
 
@@ -1135,7 +1127,7 @@ Attack behavior: No attack-start command.
 
 ### FM Flare
 
-Template ID: hunter_flare. Press to attempt Flare. Requires the learned ability.
+Template ID: hunter_flare. Drops Flare at your mouse pointer the moment you press it: no targeting circle, no extra click. Point at the ground first.
 
 Installation: Choose in /fm. Teammate assignment: no.
 
@@ -1231,23 +1223,22 @@ Attack behavior: Stop attacks and recall pet.
 
 ### FM MeleeWeave
 
-Template ID: hunter_melee. Stop your cast and attempt Raptor Strike and Mongoose Bite. Cooldowns and the global cooldown still apply.
+Template ID: hunter_melee. Stop your cast and attempt Raptor Strike and Mongoose Bite. The strikes start melee in range; a press at range leaves Auto Shot running.
 
 Installation: Choose in /fm. Teammate assignment: no.
 
-Attack behavior: Melee on current enemy.
+Attack behavior: Strike starts melee in range; never replaces Auto Shot.
 
 ```text
 #showtooltip Raptor Strike
 /stopcasting
-/startattack [harm,nodead]
 /cast [harm,nodead] !Raptor Strike
 /cast [harm,nodead] Mongoose Bite
 ```
 
 ### FM MarkShot
 
-Template ID: hunter_markshot. Mark your current enemy, start Auto Shot, and send your pet.
+Template ID: hunter_markshot. Pull button, press once: mark your current enemy, start Auto Shot, and send your pet.
 
 Installation: Choose in /fm. Teammate assignment: no.
 
@@ -1258,6 +1249,40 @@ Attack behavior: Ranged Auto Shot and pet on current enemy.
 /cast [harm,nodead] !Auto Shot
 /cast [harm,nodead] Hunter's Mark
 /petattack [harm,nodead]
+```
+
+### FM ShotTarget
+
+Template ID: hunter_shottarget. Auto Shot that drops a dead or friendly target and picks the nearest enemy when you have none. Hostile mouseover first. Sends your pet to the same enemy.
+
+Installation: Choose in /fm. Teammate assignment: no.
+
+Attack behavior: Ranged Auto Shot and pet; picks an enemy when none is selected.
+
+```text
+#showtooltip Auto Shot
+/cleartarget [dead][help]
+/targetenemy [noexists]
+/cast [@mouseover,harm,exists,nodead] !Auto Shot; !Auto Shot
+/petattack [@mouseover,harm,exists,nodead][harm,nodead]
+```
+
+### FM AimOpen
+
+Template ID: hunter_aimopen. Opener: picks an enemy when none is selected, Raptor Strike in melee or Aimed Shot at range, then Auto Shot and your pet. Press once per pull.
+
+Installation: Choose in /fm. Teammate assignment: no.
+
+Attack behavior: Strike or shot, Auto Shot and pet; picks an enemy when none is selected.
+
+```text
+#showtooltip Aimed Shot
+/cleartarget [dead][help]
+/targetenemy [noexists]
+/cast Raptor Strike
+/cast Aimed Shot
+/cast !Auto Shot
+/petattack
 ```
 
 ### FM Hawk
@@ -1929,32 +1954,30 @@ Attack behavior: Pet chooses nearby enemies after activation.
 
 ### FM Easy
 
-Template ID: auto_hunter_easy. Pet + Auto Shot. Cycle Sting and three Arcanes; with Summon Hawk, Sting, two Hawks, Arcane. Shared cooldowns pause casting. Aspect, Mend Pet and Aimed Shot stay separate. Repeat presses. Target/combat end/Alt resets. Mana, range or cooldowns may pause a step. Fixed routine.
+Template ID: auto_hunter_easy. Pet attack, then cycle Sting and three Arcanes; with Summon Hawk, Sting, two Hawks, Arcane. Each shot starts Auto Shot. Shared cooldowns pause casting. Aspect, Mend Pet and Aimed Shot stay separate. Repeat presses. Target/combat end/Alt resets. Mana, range or cooldowns may pause a step. Fixed routine.
 
 Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: Pet attack and learned Auto Shot on current living enemy.
+Attack behavior: Pet attack; shots start Auto Shot on current living enemy.
 
 ```text
 #showtooltip
 /stopmacro [channeling][noharm][dead]
 /petattack
-/cast !Auto Shot
 /castsequence reset=target/combat/alt Serpent Sting,Summon Hawk,Summon Hawk,Arcane Shot
 ```
 
 ### FM AutoOpen
 
-Template ID: auto_hunter_open. Ranged opener. Auto Shot starts if learned; send your pet separately. Learned steps only. One press per cast; stops at the end. Alt resets. Changing target or leaving combat also resets. A fixed starter, not a live optimal rotation.
+Template ID: auto_hunter_open. Ranged opener. Each shot starts Auto Shot; send your pet separately. Learned steps only. One press per cast; stops at the end. Alt resets. Changing target or leaving combat also resets. A fixed starter, not a live optimal rotation.
 
 Installation: Automatic starter. Teammate assignment: no.
 
-Attack behavior: Ranged Auto Shot if learned; no pet command.
+Attack behavior: Shots start Auto Shot; no pet command.
 
 ```text
 #showtooltip
 /stopmacro [channeling]
-/cast [harm,nodead] !Auto Shot
 /castsequence [harm,nodead] reset=target/combat/alt Serpent Sting,Arcane Shot,null
 ```
 
@@ -2033,7 +2056,7 @@ Attack behavior: No attack-start command.
 
 ### FM Blizzard
 
-Template ID: mage_blizzard. Place Blizzard at the mouse cursor when the spell supports it.
+Template ID: mage_blizzard. Drops Blizzard at your mouse pointer the moment you press it: no targeting circle, no extra click. Point at the ground first.
 
 Installation: Automatic starter. Teammate assignment: no.
 
@@ -2180,9 +2203,9 @@ Attack behavior: No attack-start command.
 
 ### FM Flamestrike
 
-Template ID: mage_flamestrike. Press to attempt Flamestrike. Requires the learned ability.
+Template ID: mage_flamestrike. Drops Flamestrike at your mouse pointer the moment you press it: no targeting circle, no extra click. Point at the ground first.
 
-Installation: Choose in /fm. Teammate assignment: no.
+Installation: Automatic starter. Teammate assignment: no.
 
 Attack behavior: No attack-start command.
 
@@ -3327,9 +3350,9 @@ Attack behavior: No attack-start command.
 
 ### FM Distract
 
-Template ID: rogue_distract. Press to attempt Distract. Spell requirements still apply.
+Template ID: rogue_distract. Drops Distract at your mouse pointer the moment you press it: no targeting circle, no extra click. Point at the ground first.
 
-Installation: Choose in /fm. Teammate assignment: no.
+Installation: Automatic starter. Teammate assignment: no.
 
 Attack behavior: No attack-start command.
 
@@ -3901,13 +3924,43 @@ Attack behavior: Melee on current enemy.
 
 Template ID: shaman_riptide. Alt: self. Otherwise friendly mouseover, target, then self. Supports teammate assignment.
 
-Installation: Choose in /fm. Teammate assignment: yes.
+Installation: Automatic starter. Teammate assignment: yes.
 
 Attack behavior: No attack-start command.
 
 ```text
 #showtooltip Riptide
 /cast [mod:alt,@player][@mouseover,help,nodead][help,nodead][@player] Riptide
+```
+
+### FM NSWave
+
+Template ID: shaman_nswave. Emergency: stops your cast, uses Nature's Swiftness, then Healing Wave instantly. Biggest single instant heal. Alt: self. Otherwise friendly mouseover, target, then self. While Nature's Swiftness is on cooldown the heal casts at normal speed.
+
+Installation: Choose in /fm. Teammate assignment: yes.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip Healing Wave
+/stopcasting
+/cast Nature's Swiftness
+/cast [mod:alt,@player][@mouseover,help,nodead][help,nodead][@player] Healing Wave
+```
+
+### FM NSChain
+
+Template ID: shaman_nschain. Emergency: stops your cast, uses Nature's Swiftness, then Chain Heal instantly. Instant group heal; 25% stronger on a target with your Riptide. Alt: self. Otherwise friendly mouseover, target, then self. While Nature's Swiftness is on cooldown the heal casts at normal speed.
+
+Installation: Choose in /fm. Teammate assignment: yes.
+
+Attack behavior: No attack-start command.
+
+```text
+#showtooltip Chain Heal
+/stopcasting
+/cast Nature's Swiftness
+/cast [mod:alt,@player][@mouseover,help,nodead][help,nodead][@player] Chain Heal
 ```
 
 ### FM FarSeer
@@ -4591,9 +4644,9 @@ Attack behavior: No attack-start command.
 
 ### FM RainFire
 
-Template ID: warlock_rainfire. Press to attempt Rain of Fire. Requires the learned ability.
+Template ID: warlock_rainfire. Drops Rain of Fire at your mouse pointer the moment you press it: no targeting circle, no extra click. Point at the ground first.
 
-Installation: Choose in /fm. Teammate assignment: no.
+Installation: Automatic starter. Teammate assignment: no.
 
 Attack behavior: No attack-start command.
 

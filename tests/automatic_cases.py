@@ -2,8 +2,10 @@
 CASES=[]
 def case(name,code): CASES.append((name,code))
 
+# Hunter uses Serpent Sting: FM Easy has carried no Auto Shot line since 0.11.1 (each shot starts
+# it), so Auto Shot alone no longer makes a Hunter routine.
 for cls,sid,name in [('SHAMAN',403,'Lightning Bolt'),('PRIEST',585,'Smite'),
-                     ('PALADIN',21084,'Seal of Righteousness'),('HUNTER',75,'Auto Shot')]:
+                     ('PALADIN',21084,'Seal of Righteousness'),('HUNTER',1978,'Serpent Sting')]:
  case(cls+' compact routine installs only learned abilities and defers combat creation',f'''
 TEST.class='{cls}';TEST.login();assert(not TEST.named('FM Easy'))
 TEST.combat=true;TEST.learn({sid},'{name}');TEST.fire('SPELLS_CHANGED');TEST.flush()
@@ -82,14 +84,15 @@ assert(not m.body:find('Smite',1,true) and not m.body:find('Penance',1,true))
 assert(not m.body:find('Shoot',1,true) and not m.body:find('/startattack',1,true) and #m.body<=255)
 ''')
 
-case('Hunter includes pet and Auto Shot then upgrades shared cooldown cycle without AoE','''
+case('Hunter includes pet and no Auto Shot line then upgrades shared cooldown cycle without AoE','''
 TEST.class='HUNTER';TEST.learn(75,'Auto Shot');TEST.learn(1978,'Serpent Sting')
 TEST.learn(3044,'Arcane Shot');TEST.learn(2643,'Multi-Shot');TEST.login()
-local m=TEST.named('FM Easy');assert(m.body:find('Serpent Sting,Arcane Shot,Arcane Shot,Arcane Shot',1,true))
-assert(m.body:find('/petattack\\n/cast !Auto Shot',1,true))
+local m=TEST.named('FM Easy')
+assert(m.body:find('/petattack\\n/castsequence reset=target/combat/alt Serpent Sting,Arcane Shot,Arcane Shot,Arcane Shot',1,true))
+assert(not m.body:find('Auto Shot',1,true))
 TEST.learn(999004,'Summon Hawk');TEST.fire('SPELLS_CHANGED');TEST.flush()
-assert(m.body:find('Serpent Sting,Summon Hawk,Summon Hawk,Arcane Shot',1,true))
-assert(not m.body:find('Multi-Shot',1,true) and not m.body:find('Aspect',1,true) and not m.body:find('/startattack',1,true))
+assert(m.body:find('/petattack\\n/castsequence reset=target/combat/alt Serpent Sting,Summon Hawk,Summon Hawk,Arcane Shot',1,true))
+assert(not m.body:find('Auto Shot',1,true) and not m.body:find('Multi-Shot',1,true) and not m.body:find('Aspect',1,true) and not m.body:find('/startattack',1,true))
 local actions=TEST.macroModel(m.body,{target={exists=true,harm=true}})
 assert(TEST.actionsOf(actions,'petattack')[1].unit=='target')
 ''')

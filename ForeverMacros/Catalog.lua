@@ -57,12 +57,13 @@ cast("HUNTER", "hunter_raptor", "Raptor", "Start melee attacking and attempt Rap
 cast("HUNTER", "hunter_feign", "Feign", "Stop attacking, recall your pet in passive mode, then attempt Feign Death.",
     spell(5384, "Feign Death"), "", "/stopcasting\n/stopattack\n/petpassive\n/petfollow\n")
 
--- A native sequence advances only after a successful cast. Auto Shot and pet attack
--- remain independent of the Arcane Shot cooldown. No timer resets or fake spells.
+-- A native sequence advances only after a successful cast. Pet attack stays independent of
+-- the Arcane Shot cooldown. No Auto Shot line: Forever starts Auto Shot whenever a shot or
+-- sting casts, and an extra Auto Shot cast on every press delays the next shot (forever-bugs #43).
 add("HUNTER", "hunter_sequence", "HuntSeq",
-    "Press repeatedly: Serpent Sting, then three Arcane Shots. Waits on cooldowns. Alt resets; use MarkPet separately.",
-    {spell(75, "Auto Shot"), spell(1978, "Serpent Sting"), spell(3044, "Arcane Shot")},
-    "#showtooltip\n/petattack [harm,nodead]\n/cast [harm,nodead] !{1}\n/castsequence [harm,nodead] reset=target/combat/alt {2}, {3}, {3}, {3}")
+    "Press repeatedly: Serpent Sting, then three Arcane Shots. Each shot starts Auto Shot. Waits on cooldowns. Alt resets; use MarkPet separately.",
+    {spell(1978, "Serpent Sting"), spell(3044, "Arcane Shot")},
+    "#showtooltip\n/petattack [harm,nodead]\n/castsequence [harm,nodead] reset=target/combat/alt {1}, {2}, {2}, {2}")
 
 cast("WARRIOR", "warrior_charge", "Charge", "Charge your hostile mouseover, target, or Shift-focus if usable.",
     spell(100, "Charge"), hostile)
