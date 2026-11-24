@@ -16,6 +16,8 @@
 !/THIRD-PARTY.md
 !/LICENSE
 !/requirements-dev.txt
+!/docs/
+!/docs/CI.md
 
 /tools/*
 !/tools/package.py
